@@ -2,7 +2,7 @@ import React from 'react'
 import ListItem from '../components/ListItem'
 
 function HelloPage() {
-  const list = ['Item aa', 'Item bb', 'Item cc'];
+  const list = ['Item a', 'Item bb', 'Item cc'];
 
   return (
     <div>
