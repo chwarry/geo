@@ -1,5 +1,5 @@
 import React from 'react'
-import {createBrowserRouter, Link} from 'react-router-dom'
+import {createBrowserRouter} from 'react-router-dom'
 import HelloPage from '../pages/HelloPage'
 import ForecastDesignPage from '../pages/ForecastDesignPage'
 import ForecastRockPage from '../pages/ForecastRockPage'
@@ -9,19 +9,14 @@ import DesignLayout from '../components/DesignLayout'
 const router = createBrowserRouter([
   {
     path: '/',
-    element: (
-    <div>
-      <h1>Hello World222</h1>
-      <Link to="about">About Us</Link>
-    </div>
-    )
+    element: <HelloPage />
   },
   {
-    path: 'about',
+    path: '/about',
     element: <div>About</div>
   },
   {
-    path: 'hello',
+    path: '/hello',
     element: <HelloPage />
   },
   {
