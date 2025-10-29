@@ -8,6 +8,9 @@ import ForecastRockPage from '../pages/ForecastRockPage'
 import ForecastGeologyPage from '../pages/ForecastGeologyPage'
 import ForecastComprehensivePage from '../pages/ForecastComprehensivePage'
 import DesignLayout from '../components/DesignLayout'
+import ApiTestPage from '../pages/ApiTestPage'
+import SwaggerAnalyzer from '../pages/SwaggerAnalyzer'
+import BusinessDataPage from '../pages/BusinessDataPage'
 
 const router = createBrowserRouter([
   {
@@ -22,6 +25,12 @@ const router = createBrowserRouter([
       <Link to="geo-search-integrated">工点搜索（集成版 - 真实API）✨ 推荐</Link>
       <br />
       <Link to="forecast/design">预报设计管理</Link>
+      <br />
+      <Link to="api-test">🧪 API测试页面（测试新的请求工具）</Link>
+      <br />
+      <Link to="swagger-analyzer">📋 Swagger文档分析器</Link>
+      <br />
+      <Link to="business-data">💼 业务数据查询（标段/物探法/地震波）</Link>
     </div>
     )
   },
@@ -60,6 +69,18 @@ const router = createBrowserRouter([
   {
     path: 'forecast/comprehensive',
     element: <ForecastComprehensivePage />
+  },
+  {
+    path: 'api-test',
+    element: <ApiTestPage />
+  },
+  {
+    path: 'swagger-analyzer',
+    element: <SwaggerAnalyzer />
+  },
+  {
+    path: 'business-data',
+    element: <BusinessDataPage />
   }
 ])
 

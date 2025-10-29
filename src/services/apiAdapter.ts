@@ -9,7 +9,8 @@ import { mockGeoForecastAPI } from './mockAPI';
 import type { Tunnel, WorkPoint, Project } from './geoForecastAPI';
 
 // 判断是否使用真实API
-const USE_REAL_API = !!process.env.REACT_APP_API_BASE_URL;
+// 默认使用真实API（因为已经配置了代理）
+const USE_REAL_API = process.env.REACT_APP_USE_REAL_API !== 'false';
 
 /**
  * 统一的API接口
@@ -17,7 +18,7 @@ const USE_REAL_API = !!process.env.REACT_APP_API_BASE_URL;
  */
 class APIAdapter {
   // 获取项目信息
-  async getProjectInfo(projectId: string): Promise<Project> {
+  async getProjectInfo(projectId: string = 'project-001'): Promise<Project> {
     if (USE_REAL_API) {
       return realAPI.getProjectInfo();
     } else {
@@ -26,7 +27,7 @@ class APIAdapter {
   }
 
   // 获取隧道列表
-  async getTunnelList(projectId: string): Promise<Tunnel[]> {
+  async getTunnelList(projectId: string = 'project-001'): Promise<Tunnel[]> {
     if (USE_REAL_API) {
       const tunnels = await realAPI.getTunnels();
       // 为真实API返回的数据添加projectId
@@ -56,12 +57,8 @@ class APIAdapter {
   async getWorkPoints(tunnelId: string): Promise<WorkPoint[]> {
     if (USE_REAL_API) {
       const workPoints = await realAPI.getWorkPoints(tunnelId);
-      // 为真实API返回的数据添加缺失的字段
-      return workPoints.map(wp => ({
-        ...wp,
-        mileage: wp.length, // 使用length作为mileage的默认值
-        createdAt: new Date().toISOString()
-      }));
+      // 真实API已经返回完整的WorkPoint格式，不需要额外处理
+      return workPoints;
     } else {
       const response = await mockGeoForecastAPI.getWorkPoints({ tunnelId });
       return response.data;
@@ -72,12 +69,7 @@ class APIAdapter {
   async searchWorkPoints(keyword: string, tunnelId?: string): Promise<WorkPoint[]> {
     if (USE_REAL_API) {
       const workPoints = await realAPI.searchWorkPoints(keyword, tunnelId);
-      // 为真实API返回的数据添加缺失的字段
-      return workPoints.map(wp => ({
-        ...wp,
-        mileage: wp.length,
-        createdAt: new Date().toISOString()
-      }));
+      return workPoints;
     } else {
       return mockGeoForecastAPI.searchWorkPoints(keyword, tunnelId);
     }
@@ -86,12 +78,7 @@ class APIAdapter {
   // 获取工点详情
   async getWorkPointById(workPointId: string): Promise<WorkPoint> {
     if (USE_REAL_API) {
-      const wp = await realAPI.getWorkPointById(workPointId);
-      return {
-        ...wp,
-        mileage: wp.length,
-        createdAt: new Date().toISOString()
-      };
+      return realAPI.getWorkPointById(workPointId);
     } else {
       // mockGeoForecastAPI没有getWorkPointById方法，从列表中查找
       const response = await mockGeoForecastAPI.getWorkPoints({});
@@ -166,6 +153,78 @@ class APIAdapter {
     } else {
       // Mock实现：生成综合分析数据
       return this.generateMockComprehensiveAnalysis(workPointId, params);
+    }
+  }
+
+  // ========== 预报设计管理（用于 ForecastDesignPage） ==========
+  
+  /**
+   * 获取预报设计列表
+   */
+  async getForecastDesigns(params: {
+    page: number;
+    pageSize: number;
+    method?: string;
+    startDate?: string;
+    endDate?: string;
+  }) {
+    if (USE_REAL_API) {
+      const result = await realAPI.getForecastDesigns(params);
+      
+      // 如果后端返回空数据，使用 Mock 数据进行展示
+      if (result.total === 0) {
+        console.warn('⚠️ [apiAdapter] 后端无设计预报数据，使用 Mock 数据展示界面');
+        return this.generateMockDesignInfo('mock', params);
+      }
+      
+      return result;
+    } else {
+      // Mock实现：生成预报设计列表
+      return this.generateMockDesignInfo('mock', params);
+    }
+  }
+
+  /**
+   * 创建预报设计记录
+   */
+  async createForecastDesign(data: any) {
+    if (USE_REAL_API) {
+      return realAPI.createForecastDesign(data);
+    } else {
+      return { success: true };
+    }
+  }
+
+  /**
+   * 删除预报设计记录
+   */
+  async deleteForecastDesign(id: string) {
+    if (USE_REAL_API) {
+      return realAPI.deleteForecastDesign(id);
+    } else {
+      return { success: true };
+    }
+  }
+
+  /**
+   * 批量删除预报设计记录
+   */
+  async batchDeleteForecastDesigns(ids: string[]) {
+    if (USE_REAL_API) {
+      return realAPI.batchDeleteForecastDesigns(ids);
+    } else {
+      return { success: true };
+    }
+  }
+
+  /**
+   * 导入预报设计记录
+   */
+  async importForecastDesigns(file: File) {
+    if (USE_REAL_API) {
+      return realAPI.importForecastDesigns(file);
+    } else {
+      return { success: true, added: 5 };
     }
   }
 
@@ -287,7 +346,7 @@ const apiAdapter = new APIAdapter();
 if (process.env.NODE_ENV === 'development') {
   console.log(`🔌 API Mode: ${apiAdapter.getAPIType()}`);
   if (USE_REAL_API) {
-    console.log(`📡 API Base URL: ${process.env.REACT_APP_API_BASE_URL}`);
+    console.log(`📡 Using Real Backend API (via proxy: /api -> http://121.40.127.120:8080/api/v1)`);
   } else {
     console.log(`🎭 Using Mock Data for development`);
   }

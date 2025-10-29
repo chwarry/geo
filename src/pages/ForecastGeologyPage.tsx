@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   Card, 
   Button, 
@@ -11,12 +11,26 @@ import {
   Menu,
   Avatar,
   Dropdown,
-  Typography
+  Typography,
+  Message,
+  Spin
 } from '@arco-design/web-react'
 import { IconUser, IconDown } from '@arco-design/web-react/icon'
+import apiAdapter from '../services/apiAdapter'
 
 const { Header, Content } = Layout
 const { Text } = Typography
+
+// 地质预报记录类型
+type GeologyForecastRecord = {
+  id: string
+  method: string
+  time: string
+  mileage: string
+  length: string
+  status: string
+  uploadTip: string
+}
 
 // 表格列定义
 const columns = [
@@ -64,6 +78,11 @@ const columns = [
 
 function ForecastGeologyPage() {
   const [selectedMethod, setSelectedMethod] = useState('物探法')
+  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState<GeologyForecastRecord[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   
   const methods = ['物探法', '掌子面素描', '洞身素描', '钻探法', '地表补充']
   
@@ -72,6 +91,57 @@ function ForecastGeologyPage() {
     { key: 'settings', label: '设置' },
     { key: 'logout', label: '退出登录' },
   ]
+
+  // 获取地质预报数据
+  const fetchGeologyData = async () => {
+    setLoading(true)
+    try {
+      // 这里暂时使用 Mock 数据，因为没有工点ID
+      // 实际应该从路由参数或上下文中获取 workPointId
+      const mockWorkPointId = '1'
+      
+      console.log('🔍 [ForecastGeologyPage] 获取地质预报数据, workPointId:', mockWorkPointId)
+      
+      const result = await apiAdapter.getWorkPointGeologyForecast(mockWorkPointId, {
+        page,
+        pageSize
+      })
+      
+      console.log('✅ [ForecastGeologyPage] 地质预报数据:', result)
+      
+      // 转换数据格式
+      const geologyData: GeologyForecastRecord[] = result.list.map((item: any) => ({
+        id: item.id || String(Math.random()),
+        method: item.method || selectedMethod,
+        time: item.createdAt || new Date().toISOString().split('T')[0],
+        mileage: item.startMileage || 'DK713+000',
+        length: `${item.length || 0}m`,
+        status: '已完成',
+        uploadTip: '已上传'
+      }))
+      
+      setData(geologyData)
+      setTotal(result.total)
+      
+      if (geologyData.length > 0) {
+        Message.success(`加载了 ${geologyData.length} 条地质预报数据`)
+      } else {
+        Message.info('暂无地质预报数据')
+      }
+    } catch (error) {
+      console.error('❌ [ForecastGeologyPage] 获取地质预报数据失败:', error)
+      Message.error('获取地质预报数据失败')
+      setData([])
+      setTotal(0)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchGeologyData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize, selectedMethod])
 
   return (
     <Layout style={{ height: '100vh' }}>
@@ -208,16 +278,23 @@ function ForecastGeologyPage() {
 
         {/* 数据表格 */}
         <Card>
-          <Table
-            columns={columns}
-            data={[]}
-            pagination={{
-              total: 0,
-              pageSize: 10,
-              showTotal: true,
-            }}
-            noDataElement={<Empty description="暂无数据" />}
-          />
+          <Spin loading={loading}>
+            <Table
+              columns={columns}
+              data={data}
+              pagination={{
+                total,
+                current: page,
+                pageSize,
+                showTotal: true,
+                onChange: (pageNumber, pageSize) => {
+                  setPage(pageNumber)
+                  setPageSize(pageSize)
+                },
+              }}
+              noDataElement={<Empty description="暂无数据" />}
+            />
+          </Spin>
         </Card>
       </Content>
     </Layout>

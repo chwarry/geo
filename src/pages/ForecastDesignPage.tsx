@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, DatePicker, Form, Grid, Input, InputNumber, Message, Modal, Select, Space, Table } from '@arco-design/web-react'
-import http from '../utils/http'
+import apiAdapter from '../services/apiAdapter'
 
 type ForecastMethodOption = {
   label: string
@@ -16,11 +16,6 @@ type ForecastRecord = {
   length: number
   minBurialDepth: number
   designTimes: number
-}
-
-type ListResponse = {
-  list: ForecastRecord[]
-  total: number
 }
 
 const { Row, Col } = Grid
@@ -49,7 +44,13 @@ function ForecastDesignPage() {
 
   const fetchList = async () => {
     const values = form.getFieldsValue()
-    const params: Record<string, unknown> = {
+    const params: {
+      page: number;
+      pageSize: number;
+      method?: string;
+      startDate?: string;
+      endDate?: string;
+    } = {
       page,
       pageSize,
       method: values.method,
@@ -61,10 +62,11 @@ function ForecastDesignPage() {
 
     setLoading(true)
     try {
-      const res = await http.get<ListResponse, ListResponse>('/forecast/designs', { params })
+      const res = await apiAdapter.getForecastDesigns(params)
       setData(res.list || [])
       setTotal(res.total || 0)
     } catch (error) {
+      console.error('获取预报设计数据失败:', error)
       Message.error('获取数据失败')
     } finally {
       setLoading(false)
@@ -82,10 +84,11 @@ function ForecastDesignPage() {
       content: '删除后不可恢复，是否继续？',
       onOk: async () => {
         try {
-          await http.delete(`/forecast/designs/${record.id}`)
+          await apiAdapter.deleteForecastDesign(record.id)
           Message.success('删除成功')
           fetchList()
         } catch (error) {
+          console.error('删除预报设计失败:', error)
           Message.error('删除失败')
         }
       },
@@ -99,11 +102,12 @@ function ForecastDesignPage() {
       content: `将删除选中的 ${selectedRowKeys.length} 条记录，是否继续？`,
       onOk: async () => {
         try {
-          await http.post('/forecast/designs/batch-delete', { ids: selectedRowKeys })
+          await apiAdapter.batchDeleteForecastDesigns(selectedRowKeys)
           Message.success('批量删除成功')
           setSelectedRowKeys([])
           fetchList()
         } catch (error) {
+          console.error('批量删除预报设计失败:', error)
           Message.error('批量删除失败')
         }
       },
@@ -120,16 +124,13 @@ function ForecastDesignPage() {
   const handleImportFileChange: React.ChangeEventHandler<HTMLInputElement> = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const formData = new FormData()
-    formData.append('file', file)
     try {
       Message.loading({ id: 'import', content: '导入中...', duration: 0 })
-      await http.post('/forecast/designs/import', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      await apiAdapter.importForecastDesigns(file)
       Message.success({ id: 'import', content: '导入成功' })
       fetchList()
     } catch (error) {
+      console.error('导入预报设计失败:', error)
       Message.error({ id: 'import', content: '导入失败' })
     }
   }
@@ -137,13 +138,14 @@ function ForecastDesignPage() {
   const handleAddOk = async () => {
     try {
       const values = await addForm.validate()
-      await http.post('/forecast/designs', values)
+      await apiAdapter.createForecastDesign(values)
       Message.success('新增成功')
       setAddVisible(false)
       addForm.resetFields()
       fetchList()
     } catch (error) {
-      // 表单校验或接口错误
+      console.error('新增预报设计失败:', error)
+      Message.error('新增失败')
     }
   }
 

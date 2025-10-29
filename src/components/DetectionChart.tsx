@@ -151,11 +151,13 @@ const DetectionChart: React.FC<DetectionChartProps> = ({ data }) => {
   };
 
   return (
-    <div style={{ width: '100%', height: '400px' }}>
+    <div style={{ width: '100%', height: '500px', minHeight: '500px' }}>
       <ReactECharts 
         option={option} 
         style={{ height: '100%', width: '100%' }}
         opts={{ renderer: 'canvas' }}
+        notMerge={true}
+        lazyUpdate={true}
       />
     </div>
   );

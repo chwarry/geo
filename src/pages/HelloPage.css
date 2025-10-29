@@ -20,7 +20,7 @@
   transition: all 0.2s;
 }
 
-/* 自定义滚动条 */
+/* 自定义滚动条 - 左侧面板 */
 .arco-layout-sider::-webkit-scrollbar {
   width: 6px;
 }
@@ -36,6 +36,42 @@
 
 .arco-layout-sider::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* 自定义滚动条 - 主内容区域 */
+.arco-layout-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.arco-layout-content::-webkit-scrollbar-track {
+  background: #f7f8fa;
+}
+
+.arco-layout-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.arco-layout-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 自定义滚动条 - 工点列表 */
+div[style*="overflow: auto"]::-webkit-scrollbar {
+  width: 6px;
+}
+
+div[style*="overflow: auto"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+div[style*="overflow: auto"]::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+div[style*="overflow: auto"]::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
 }
 
 /* 搜索框聚焦效果 */
@@ -79,4 +115,72 @@
 
 .project-info-card:hover {
   box-shadow: 0 4px 12px rgba(22, 93, 255, 0.1);
+}
+
+/* Collapse 折叠面板样式优化 */
+.arco-collapse-item {
+  margin-bottom: 12px;
+  border: 1px solid #e8e9ea !important;
+  border-radius: 4px !important;
+  overflow: hidden;
+  background-color: #fff;
+  transition: all 0.3s ease;
+}
+
+.arco-collapse-item:hover {
+  border-color: #165dff !important;
+  box-shadow: 0 2px 8px rgba(22, 93, 255, 0.1);
+}
+
+.arco-collapse-item-header {
+  padding: 16px 20px !important;
+  background-color: #fff;
+  transition: background-color 0.2s;
+}
+
+.arco-collapse-item-header:hover {
+  background-color: #f7f8fa;
+}
+
+.arco-collapse-item-active .arco-collapse-item-header {
+  background-color: #e8f3ff;
+  border-bottom: 1px solid #e8e9ea;
+}
+
+/* 展开图标样式 */
+.arco-collapse-item-icon {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #86909c;
+  transition: transform 0.3s ease, color 0.3s ease;
+  font-size: 14px;
+}
+
+.arco-collapse-item-active .arco-collapse-item-icon {
+  transform: rotate(90deg);
+  color: #165dff;
+}
+
+.arco-collapse-item-icon:hover {
+  color: #165dff;
+}
+
+/* 折叠面板内容区域 */
+.arco-collapse-item-content {
+  background-color: #fafafa;
+  border-top: 1px solid #e8e9ea;
+}
+
+.arco-collapse-item-content-box {
+  padding: 0 !important;
+  min-height: auto !important;
+  height: auto !important;
+}
+
+/* 确保图表容器有足够空间 */
+.arco-card-body {
+  min-height: auto;
 }

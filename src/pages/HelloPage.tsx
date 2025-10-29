@@ -10,14 +10,13 @@ import {
   Card,
   Space,
   Typography,
-  Divider,
   Spin,
   Message,
   Empty,
   Select,
   Collapse
 } from '@arco-design/web-react';
-import { IconSearch, IconUser, IconDown, IconFile } from '@arco-design/web-react/icon';
+import { IconSearch, IconUser, IconDown, IconFile, IconRight } from '@arco-design/web-react/icon';
 import { Tunnel, WorkPoint, Project } from '../services/geoForecastAPI';
 import apiAdapter from '../services/apiAdapter';
 import { mockConfig } from '../services/mockConfig';
@@ -205,13 +204,6 @@ function HelloPage() {
       filtered = filtered.filter(workPoint => workPoint.riskLevel === risk);
     }
 
-    // 排序：置顶的在前面
-    filtered.sort((a, b) => {
-      if (a.isTop && !b.isTop) return -1;
-      if (!a.isTop && b.isTop) return 1;
-      return 0;
-    });
-
     setFilteredWorkPoints(filtered);
   }, [workPoints]);
 
@@ -232,34 +224,6 @@ function HelloPage() {
     setWorkPointSearchKeyword(''); // 清空工点搜索
     fetchWorkPoints(tunnelId);
   }, [fetchWorkPoints]);
-
-  // 工点置顶处理
-  const handleWorkPointToggleTop = useCallback(async (workPointId: string, isTop: boolean) => {
-    try {
-      await apiAdapter.toggleWorkPointTop(workPointId, isTop);
-      
-      // 更新本地状态
-      const updatedWorkPoints = workPoints.map(wp => 
-        wp.id === workPointId ? { ...wp, isTop } : wp
-      );
-      setWorkPoints(updatedWorkPoints);
-      
-      // 重新过滤和排序
-      const filteredAndSorted = updatedWorkPoints
-        .filter(wp => 
-          !workPointSearchKeyword || 
-          wp.name.toLowerCase().includes(workPointSearchKeyword.toLowerCase()) ||
-          wp.code.toLowerCase().includes(workPointSearchKeyword.toLowerCase())
-        )
-        .sort((a, b) => (b.isTop ? 1 : 0) - (a.isTop ? 1 : 0));
-      
-      setFilteredWorkPoints(filteredAndSorted);
-      Message.success(isTop ? '置顶成功' : '取消置顶成功');
-    } catch (error) {
-      console.error('置顶操作失败:', error);
-      Message.error('置顶操作失败');
-    }
-  }, [workPoints, workPointSearchKeyword]);
 
   // 初始化数据
   useEffect(() => {
@@ -284,7 +248,9 @@ function HelloPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)'
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
+        height: '64px',
+        flexShrink: 0
       }}>
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <h3 style={{ margin: 0, color: '#1d2129', fontSize: '20px', fontWeight: 600 }}>
@@ -323,23 +289,34 @@ function HelloPage() {
         </Dropdown>
       </Header>
 
-      <Layout>
+      <Layout style={{ height: 'calc(100vh - 64px)' }}>
         {/* 左侧隧道选择面板 */}
         <Sider 
           width={280} 
           style={{ 
             backgroundColor: '#f7f8fa',
-            borderRight: '1px solid #e8e9ea'
+            borderRight: '1px solid #e8e9ea',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
           }}
         >
-          <div style={{ padding: '16px' }}>
+          <div style={{ 
+            padding: '16px',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
               marginBottom: '16px',
               fontSize: '16px',
               fontWeight: 500,
-              color: '#1d2129'
+              color: '#1d2129',
+              flexShrink: 0
             }}>
               <IconFile style={{ marginRight: '8px', color: '#165dff' }} />
               标段查询
@@ -347,13 +324,18 @@ function HelloPage() {
             
             <Search 
               placeholder="搜索隧道名称或编号"
-              style={{ marginBottom: '16px' }}
+              style={{ marginBottom: '16px', flexShrink: 0 }}
               value={tunnelSearchKeyword}
               onChange={(value) => handleTunnelSearch(value)}
               allowClear
             />
 
-            <div style={{ marginTop: '20px' }}>
+            <div style={{ 
+              marginTop: '20px',
+              flex: 1,
+              overflow: 'auto',
+              minHeight: 0
+            }}>
               <Spin loading={loadingTunnels}>
                 {filteredTunnels.length === 0 ? (
                   <Empty 
@@ -397,7 +379,12 @@ function HelloPage() {
         </Sider>
 
         {/* 主要内容区域 */}
-        <Content style={{ backgroundColor: '#fff', padding: '24px' }}>
+        <Content style={{ 
+          backgroundColor: '#f0f2f5', 
+          padding: '24px',
+          overflowY: 'auto',
+          overflowX: 'hidden'
+        }}>
           {/* 统计概览卡片 */}
           <div style={{ 
             marginBottom: '24px',
@@ -433,211 +420,228 @@ function HelloPage() {
           {/* 项目信息区域 */}
           <div style={{ 
             marginBottom: '24px',
-            padding: '16px',
-            backgroundColor: '#f7f8fa',
-            borderRadius: '6px',
+            padding: '20px 24px',
+            backgroundColor: '#fff',
+            borderRadius: '2px',
+            border: '1px solid #e8e9ea',
             borderLeft: '4px solid #165dff'
           }}>
             <Spin loading={loadingProject}>
-              <Space size="large">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '48px' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <IconFile style={{ marginRight: '8px', color: '#165dff' }} />
-                  <span style={{ fontWeight: 600, color: '#1d2129' }}>建设单位</span>
-                  <Text style={{ marginLeft: '12px' }}>
-                    {projectInfo?.constructionUnit || '渝昆高铁引入昆明枢纽组织工程'}
-                  </Text>
+                  <IconFile style={{ marginRight: '8px', color: '#165dff', fontSize: '16px' }} />
+                  <span style={{ fontWeight: 500, color: '#1d2129', marginRight: '12px' }}>建设单位:</span>
+                  <span style={{ color: '#4e5969' }}>
+                    {projectInfo?.constructionUnit || '中国铁路昆明局集团有限公司'}
+                  </span>
                 </div>
                 
-                <Divider type="vertical" style={{ height: '20px' }} />
-                
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <IconFile style={{ marginRight: '8px', color: '#165dff' }} />
-                  <span style={{ fontWeight: 600, color: '#1d2129' }}>项目名称</span>
-                  <Text style={{ marginLeft: '12px' }}>
+                  <IconFile style={{ marginRight: '8px', color: '#165dff', fontSize: '16px' }} />
+                  <span style={{ fontWeight: 500, color: '#1d2129', marginRight: '12px' }}>项目名称:</span>
+                  <span style={{ color: '#4e5969' }}>
                     {projectInfo?.name || '渝昆高铁引入昆明枢纽组织工程'}
-                  </Text>
+                  </span>
                 </div>
-              </Space>
+              </div>
             </Spin>
           </div>
 
           {/* 工点搜索区域 */}
           <Card 
-            title="工点搜索"
-            style={{ width: '100%' }}
-            extra={
-              <Space>
-                <Search 
-                  placeholder="输入名称搜索"
-                  style={{ width: 200 }}
-                  value={workPointSearchKeyword}
-                  onChange={(value) => handleWorkPointSearch(value)}
-                  allowClear
-                  searchButton={
-                    <Button type="primary" icon={<IconSearch />}>
-                      搜索
-                    </Button>
-                  }
-                />
-                <Select
-                  placeholder="工点类型"
-                  style={{ width: 120 }}
-                  value={selectedWorkPointType}
-                  onChange={setSelectedWorkPointType}
-                  allowClear
-                >
-                  <Select.Option value="明洞">明洞</Select.Option>
-                  <Select.Option value="洞门">洞门</Select.Option>
-                  <Select.Option value="主洞段">主洞段</Select.Option>
-                  <Select.Option value="横通道">横通道</Select.Option>
-                  <Select.Option value="暗挖段">暗挖段</Select.Option>
-                  <Select.Option value="救援站">救援站</Select.Option>
-                  <Select.Option value="通风井">通风井</Select.Option>
-                </Select>
-                <Select
-                  placeholder="风险等级"
-                  style={{ width: 100 }}
-                  value={selectedRiskLevel}
-                  onChange={setSelectedRiskLevel}
-                  allowClear
-                >
-                  <Select.Option value="低风险">
-                    <span style={{ color: '#52c41a' }}>低风险</span>
-                  </Select.Option>
-                  <Select.Option value="中风险">
-                    <span style={{ color: '#faad14' }}>中风险</span>
-                  </Select.Option>
-                  <Select.Option value="高风险">
-                    <span style={{ color: '#f5222d' }}>高风险</span>
-                  </Select.Option>
-                </Select>
-                <Button 
-                  onClick={() => {
-                    // 刷新当前隧道的工点数据
-                    if (selectedTunnel) {
-                      fetchWorkPoints(selectedTunnel);
-                    }
-                  }}
-                >
-                  刷新
-                </Button>
-              </Space>
-            }
+            title={<span style={{ fontSize: '16px', fontWeight: 500 }}>工点搜索</span>}
+            style={{ 
+              width: '100%',
+              marginBottom: '24px'
+            }}
+            bordered
           >
+            {/* 搜索条件行 */}
+            <div style={{ 
+              marginBottom: '20px', 
+              padding: '16px', 
+              backgroundColor: '#f7f8fa', 
+              borderRadius: '4px',
+              display: 'flex',
+              gap: '12px',
+              alignItems: 'center'
+            }}>
+              <Input 
+                placeholder="输入名称搜索"
+                style={{ flex: 1, minWidth: '200px' }}
+                value={workPointSearchKeyword}
+                onChange={(value) => handleWorkPointSearch(value)}
+                allowClear
+                suffix={<IconSearch />}
+              />
+              <Select
+                placeholder="工点类型"
+                style={{ width: '160px' }}
+                value={selectedWorkPointType}
+                onChange={setSelectedWorkPointType}
+                allowClear
+              >
+                <Select.Option value="明洞">明洞</Select.Option>
+                <Select.Option value="洞门">洞门</Select.Option>
+                <Select.Option value="主洞段">主洞段</Select.Option>
+                <Select.Option value="横通道">横通道</Select.Option>
+                <Select.Option value="暗挖段">暗挖段</Select.Option>
+                <Select.Option value="救援站">救援站</Select.Option>
+                <Select.Option value="通风井">通风井</Select.Option>
+              </Select>
+              <Select
+                placeholder="风险等级"
+                style={{ width: '160px' }}
+                value={selectedRiskLevel}
+                onChange={setSelectedRiskLevel}
+                allowClear
+              >
+                <Select.Option value="低风险">低风险</Select.Option>
+                <Select.Option value="中风险">中风险</Select.Option>
+                <Select.Option value="高风险">高风险</Select.Option>
+              </Select>
+              <Button 
+                onClick={() => {
+                  // 刷新当前隧道的工点数据
+                  if (selectedTunnel) {
+                    fetchWorkPoints(selectedTunnel);
+                  }
+                }}
+              >
+                刷新
+              </Button>
+            </div>
+
+            {/* 工点列表 */}
             <Spin loading={loadingWorkPoints}>
-              {filteredWorkPoints.length === 0 ? (
-                <Empty 
-                  description={workPointSearchKeyword ? "未找到匹配的工点" : "暂无工点数据"}
-                  style={{ padding: '40px 0' }}
-                />
-              ) : (
-                <Collapse
-                  accordion={false}
-                  style={{ backgroundColor: 'transparent', border: 'none' }}
-                  onChange={(key, keys) => {
-                    // 当展开工点时加载数据
-                    if (typeof key === 'string' && keys.includes(key)) {
-                      const workPoint = filteredWorkPoints.find(wp => wp.id === key);
-                      if (workPoint) {
-                        handleOpenWorkPointDetail(workPoint);
+                {filteredWorkPoints.length === 0 ? (
+                  <Empty 
+                    description={workPointSearchKeyword ? "未找到匹配的工点" : "暂无工点数据"}
+                    style={{ padding: '40px 0' }}
+                  />
+                ) : (
+                  <Collapse
+                    accordion={false}
+                    style={{ 
+                      backgroundColor: 'transparent', 
+                      border: 'none'
+                    }}
+                    expandIcon={<IconRight />}
+                    expandIconPosition="right"
+                    onChange={(key, keys) => {
+                      // 当展开工点时加载数据
+                      if (typeof key === 'string' && keys.includes(key)) {
+                        const workPoint = filteredWorkPoints.find(wp => wp.id === key);
+                        if (workPoint) {
+                          handleOpenWorkPointDetail(workPoint);
+                        }
                       }
-                    }
-                  }}
-                >
+                    }}
+                  >
                   {filteredWorkPoints.map((item) => (
                     <CollapseItem
                       key={item.id}
                       header={
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-                            <IconFile style={{ marginRight: '12px', color: '#165dff', fontSize: '18px' }} />
-                            <div>
-                              <div style={{ 
-                                fontWeight: item.isTop ? 600 : 500,
-                                color: item.isTop ? '#165dff' : '#1d2129',
-                                fontSize: '15px'
-                              }}>
-                                {item.isTop && '📌 '}{item.name}
-                              </div>
-                              <div style={{ 
-                                fontSize: '12px', 
-                                color: '#86909c', 
-                                marginTop: '4px',
-                                display: 'flex',
-                                gap: '12px'
-                              }}>
-                                <span>里程: {item.code}</span>
-                                <span>长度: {item.length > 0 ? '+' : ''}{item.length}m</span>
-                                {item.type && <span>类型: {item.type}</span>}
-                                {item.riskLevel && (
-                                  <span style={{ 
-                                    color: item.riskLevel === '高风险' ? '#f53f3f' : 
-                                           item.riskLevel === '中风险' ? '#ff7d00' : '#00b42a',
-                                    fontWeight: 500
-                                  }}>
-                                    {item.riskLevel}
-                                  </span>
-                                )}
-                              </div>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          width: '100%'
+                        }}>
+                          <IconFile style={{ 
+                            marginRight: '12px', 
+                            color: '#165dff', 
+                            fontSize: '16px'
+                          }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ 
+                              fontWeight: 500,
+                              color: '#1d2129',
+                              fontSize: '15px',
+                              marginBottom: '6px'
+                            }}>
+                              {item.name}
+                            </div>
+                            <div style={{ 
+                              fontSize: '13px', 
+                              color: '#86909c',
+                              display: 'flex',
+                              gap: '16px',
+                              flexWrap: 'wrap'
+                            }}>
+                              <span>里程: {item.code}</span>
+                              <span>长度: {item.length > 0 ? '+' : ''}{item.length}m</span>
+                              {item.type && <span>类型: {item.type}</span>}
+                              {item.riskLevel && (
+                                <span style={{ 
+                                  color: item.riskLevel === '高风险' ? '#f53f3f' : 
+                                         item.riskLevel === '中风险' ? '#ff7d00' : '#00b42a',
+                                  fontWeight: 500
+                                }}>
+                                  {item.riskLevel}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
                       }
                       name={item.id}
                       extra={
-                        <Button
-                          type="text"
+                        <Button 
+                          type="primary" 
                           size="small"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleWorkPointToggleTop(item.id, !item.isTop);
+                            console.log('查顶按钮点击:', item.name);
                           }}
-                          style={{ 
-                            color: item.isTop ? '#165dff' : '#86909c',
-                          }}
+                          style={{ marginLeft: '12px' }}
                         >
-                          {item.isTop ? '取消置顶' : '置顶'}
+                          查顶
                         </Button>
                       }
                       destroyOnHide
                     >
                       {/* 工点详细内容 - 移除条件判断，让每个工点都能显示 */}
-                      <div style={{ padding: '16px 0' }}>
+                      <div style={{ padding: '20px' }}>
                         {/* 探测信息图表 */}
-                        <Card title="探测信息" style={{ marginBottom: '20px' }}>
+                        <Card 
+                          title={<span style={{ fontSize: '16px', fontWeight: 500 }}>探测信息</span>}
+                          style={{ marginBottom: '20px' }}
+                          bodyStyle={{ padding: '24px' }}
+                        >
                           <Spin loading={loadingDetection}>
                             {detectionData && selectedWorkPoint?.id === item.id ? (
                               <DetectionChart data={detectionData} />
                             ) : (
-                              <Empty description="暂无探测数据" />
+                              <Empty description="暂无探测数据" style={{ padding: '60px 0' }} />
                             )}
                           </Spin>
                         </Card>
 
                         {/* 三个导航按钮 */}
-                        <Card>
-                          <div style={{ marginBottom: '20px' }}>
-                            <Space size="medium">
-                              <Button
-                                type="primary"
-                                onClick={() => navigate('/forecast/design')}
-                              >
-                                设计信息
-                              </Button>
-                              <Button
-                                type="primary"
-                                onClick={() => navigate('/forecast/geology')}
-                              >
-                                地质预报
-                              </Button>
-                              <Button
-                                type="primary"
-                                onClick={() => navigate('/forecast/comprehensive')}
-                              >
-                                综合分析
-                              </Button>
-                            </Space>
-                          </div>
+                        <Card bodyStyle={{ padding: '24px' }}>
+                          <Space size="large">
+                            <Button
+                              type="primary"
+                              size="large"
+                              onClick={() => navigate('/forecast/design')}
+                            >
+                              设计信息
+                            </Button>
+                            <Button
+                              type="primary"
+                              size="large"
+                              onClick={() => navigate('/forecast/geology')}
+                            >
+                              地质预报
+                            </Button>
+                            <Button
+                              type="primary"
+                              size="large"
+                              onClick={() => navigate('/forecast/comprehensive')}
+                            >
+                              综合分析
+                            </Button>
+                          </Space>
                         </Card>
                       </div>
                     </CollapseItem>
