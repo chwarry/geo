@@ -449,14 +449,6 @@ function HelloPage() {
 
           {/* 工点搜索区域 */}
           <Card 
-<<<<<<< HEAD
-            title={<span style={{ fontSize: '16px', fontWeight: 500 }}>工点搜索</span>}
-            style={{ 
-              width: '100%',
-              marginBottom: '24px'
-            }}
-            bordered
-=======
             title="工点搜索"
             style={{ width: '100%' }}
             extra={
@@ -517,7 +509,6 @@ function HelloPage() {
                 </Button>
               </Space>
             }
->>>>>>> 03b9f6334946a5521ab7852c7740f2f7690044e2
           >
             {/* 搜索条件行 */}
             <div style={{ 

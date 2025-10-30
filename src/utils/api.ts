@@ -21,19 +21,12 @@ export interface RequestOptions<TIn = any, TOut = any> {
  * You can override by passing a custom `transform` in options.
  */
 function defaultTransform<T>(raw: any): T {
-  console.log('🔍 [api.ts] defaultTransform 收到原始数据:', raw);
-  console.log('🔍 [api.ts] 数据类型:', typeof raw);
-  console.log('🔍 [api.ts] 是否有data字段:', 'data' in (raw || {}));
-  console.log('🔍 [api.ts] 是否有resultcode字段:', 'resultcode' in (raw || {}));
-  
   if (raw && typeof raw === 'object') {
-    // common shapes - support multiple backend response formats
-    if ('data' in raw && (('code' in raw) || ('resultcode' in raw) || ('message' in raw) || ('success' in raw))) {
-      console.log('🔍 [api.ts] 解包data字段，返回:', raw.data);
+    // common shapes
+    if ('data' in raw && (('code' in raw) || ('message' in raw) || ('success' in raw))) {
       return raw.data as T;
     }
   }
-  console.log('🔍 [api.ts] 直接返回原始数据');
   return raw as T;
 }
 
