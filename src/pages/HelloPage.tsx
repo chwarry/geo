@@ -19,7 +19,6 @@ import {
 import { IconSearch, IconUser, IconDown, IconFile, IconRight } from '@arco-design/web-react/icon';
 import { Tunnel, WorkPoint, Project } from '../services/geoForecastAPI';
 import apiAdapter from '../services/apiAdapter';
-import { mockConfig } from '../services/mockConfig';
 import DetectionChart from '../components/DetectionChart';
 import './HelloPage.css';
 
@@ -55,6 +54,14 @@ function HelloPage() {
   const [detectionData, setDetectionData] = useState<any>(null);
   const [loadingDetection, setLoadingDetection] = useState(false);
 
+  // 统计数据状态
+  const [statistics, setStatistics] = useState({
+    totalTunnels: 0,
+    totalWorkPoints: 0,
+    completedWorkPoints: 0,
+    highRiskPoints: 0
+  });
+
   const userMenuItems = [
     { key: 'profile', label: '个人中心' },
     { key: 'settings', label: '设置' },
@@ -82,6 +89,38 @@ function HelloPage() {
     // 加载探测数据
     loadWorkPointDetectionData(workPoint.id);
   }, [loadWorkPointDetectionData]);
+
+  // 计算统计数据
+  const calculateStatistics = useCallback(async () => {
+    try {
+      // 获取所有隧道数据
+      const tunnels = await apiAdapter.getTunnelList();
+      
+      // 获取所有工点数据（遍历所有隧道）
+      let allWorkPoints: WorkPoint[] = [];
+      for (const tunnel of tunnels) {
+        try {
+          const points = await apiAdapter.getWorkPoints(tunnel.id);
+          allWorkPoints = [...allWorkPoints, ...points];
+        } catch (error) {
+          console.error(`获取隧道 ${tunnel.id} 的工点失败:`, error);
+        }
+      }
+
+      // 计算统计数据
+      const stats = {
+        totalTunnels: tunnels.length,
+        totalWorkPoints: allWorkPoints.length,
+        completedWorkPoints: allWorkPoints.filter(wp => wp.status === '已完成').length,
+        highRiskPoints: allWorkPoints.filter(wp => wp.riskLevel === '高风险').length
+      };
+
+      console.log('📊 统计数据:', stats);
+      setStatistics(stats);
+    } catch (error) {
+      console.error('计算统计数据失败:', error);
+    }
+  }, []);
 
   // 获取项目信息
   const fetchProjectInfo = useCallback(async () => {
@@ -229,7 +268,8 @@ function HelloPage() {
   useEffect(() => {
     fetchProjectInfo();
     fetchTunnelList();
-  }, [fetchProjectInfo, fetchTunnelList]);
+    calculateStatistics(); // 计算统计数据
+  }, [fetchProjectInfo, fetchTunnelList, calculateStatistics]);
 
   // 当选中隧道变化时，获取对应的工点数据
   useEffect(() => {
@@ -393,25 +433,25 @@ function HelloPage() {
           }}>
             <Card style={{ flex: 1, textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#165dff' }}>
-                {mockConfig.project.totalTunnels}
+                {statistics.totalTunnels}
               </div>
               <div style={{ color: '#86909c', marginTop: '4px' }}>隧道总数</div>
             </Card>
             <Card style={{ flex: 1, textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#52c41a' }}>
-                {mockConfig.project.totalWorkPoints}
+                {statistics.totalWorkPoints}
               </div>
               <div style={{ color: '#86909c', marginTop: '4px' }}>工点总数</div>
             </Card>
             <Card style={{ flex: 1, textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#faad14' }}>
-                {mockConfig.project.completedWorkPoints}
+                {statistics.completedWorkPoints}
               </div>
               <div style={{ color: '#86909c', marginTop: '4px' }}>已完成</div>
             </Card>
             <Card style={{ flex: 1, textAlign: 'center' }}>
               <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f5222d' }}>
-                {mockConfig.project.highRiskPoints}
+                {statistics.highRiskPoints}
               </div>
               <div style={{ color: '#86909c', marginTop: '4px' }}>高风险工点</div>
             </Card>
