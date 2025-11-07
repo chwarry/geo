@@ -15,10 +15,17 @@ import {
   Message,
   Spin,
   Modal,
-  Upload
+  Upload,
+  Tabs,
+  Form,
+  Input,
+  InputNumber
 } from '@arco-design/web-react'
 import { IconUser, IconDown } from '@arco-design/web-react/icon'
 import apiAdapter from '../services/apiAdapter'
+
+const { TabPane } = Tabs
+const { TextArea } = Input
 
 const { Header, Content } = Layout
 const { Text } = Typography
@@ -39,6 +46,12 @@ function ForecastGeologyPage() {
   const [detailVisible, setDetailVisible] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<GeologyForecastRecord | null>(null)
   
+  // 编辑弹窗状态
+  const [editVisible, setEditVisible] = useState(false)
+  const [editingRecord, setEditingRecord] = useState<GeologyForecastRecord | null>(null)
+  const [activeTab, setActiveTab] = useState('1')
+  const [editForm] = Form.useForm()
+  
   // 上传弹窗状态
   const [uploadVisible, setUploadVisible] = useState(false)
   const [uploadingRecord, setUploadingRecord] = useState<GeologyForecastRecord | null>(null)
@@ -52,9 +65,36 @@ function ForecastGeologyPage() {
 
   // 修改
   const handleEdit = (record: GeologyForecastRecord) => {
-    Message.info(`修改记录：${record.method} - ID: ${record.id}`)
-    // TODO: 跳转到编辑页面或打开编辑弹窗
-    // navigate(`/forecast/geology/edit/${record.id}`)
+    setEditingRecord(record)
+    // 解析里程数据（例如 "DK713+485"）
+    const mileageMatch = record.mileage.match(/([A-Z]+)?(\d+)\+(\d+)/)
+    const mileagePrefix = mileageMatch?.[1] || 'DK'
+    const mileageMain = mileageMatch?.[2] || '713'
+    const mileageSub = mileageMatch?.[3] || '485'
+    
+    // 解析长度（例如 "100m"）
+    const length = parseFloat(record.length.replace('m', '')) || 0
+    
+    // 设置表单初始值
+    editForm.setFieldsValue({
+      // 基本信息
+      rockGrade: 'IV',
+      mileagePrefix,
+      startMileageMain: parseInt(mileageMain),
+      startMileageSub: parseInt(mileageSub),
+      length,
+      author: '一分部',
+      modifyReason: '',
+      // 地表信息（其他地表信息）
+      surfaceStratumDescription: '',        // 地层岩性描述
+      surfaceKarstDescription: '',          // 地表岩溶描述
+      surfaceSpecialGeologyDescription: '', // 特殊地质产状描述
+      surfaceTunnelDescription: '',         // 人为坑道描述
+      surfaceGeologyAssessment: ''          // 地质评定
+    })
+    
+    setActiveTab('1')
+    setEditVisible(true)
   }
 
   // 复制
@@ -102,6 +142,57 @@ function ForecastGeologyPage() {
         }
       }
     })
+  }
+
+  // 编辑确认
+  const handleEditOk = async () => {
+    try {
+      const values = await editForm.validate()
+      
+      // 基本信息 - 合并开始里程
+      const startMileage = `${values.mileagePrefix}${values.startMileageMain}+${values.startMileageSub}`
+      
+      const submitData = {
+        id: editingRecord?.id,
+        // 基本信息
+        basicInfo: {
+          rockGrade: values.rockGrade,
+          mileagePrefix: values.mileagePrefix,
+          startMileage,
+          length: values.length,
+          author: values.author,
+          modifyReason: values.modifyReason
+        },
+        // 地表信息
+        surfaceInfo: {
+          stratumDescription: values.surfaceStratumDescription,        // 地层岩性描述
+          karstDescription: values.surfaceKarstDescription,            // 地表岩溶描述
+          specialGeologyDescription: values.surfaceSpecialGeologyDescription, // 特殊地质产状描述
+          tunnelDescription: values.surfaceTunnelDescription,          // 人为坑道描述
+          geologyAssessment: values.surfaceGeologyAssessment           // 地质评定
+        }
+      }
+      
+      console.log('提交编辑数据:', submitData)
+      
+      // TODO: 调用API更新
+      Message.success('修改成功')
+      setEditVisible(false)
+      setEditingRecord(null)
+      editForm.resetFields()
+      // 刷新列表
+      fetchGeologyData()
+    } catch (error) {
+      console.error('表单验证失败:', error)
+    }
+  }
+
+  // 编辑取消
+  const handleEditCancel = () => {
+    setEditVisible(false)
+    setEditingRecord(null)
+    editForm.resetFields()
+    setActiveTab('1')
   }
 
   // 上传文件处理
@@ -532,6 +623,271 @@ function ForecastGeologyPage() {
               </div>
             </div>
           )}
+        </Modal>
+
+        {/* 编辑弹窗 */}
+        <Modal
+          title="修改设计围岩"
+          visible={editVisible}
+          onOk={handleEditOk}
+          onCancel={handleEditCancel}
+          style={{ width: 1000 }}
+          okText="确定"
+          cancelText="取消"
+        >
+          <Tabs activeTab={activeTab} onChange={setActiveTab} type="line">
+            {/* 基本信息选项卡 */}
+            <TabPane key="1" title="基本信息">
+              <Form
+                form={editForm}
+                layout="vertical"
+                style={{ padding: '20px 0' }}
+                autoComplete="off"
+              >
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
+                  {/* 围岩等级 */}
+                  <Form.Item
+                    label="围岩等级"
+                    field="rockGrade"
+                    rules={[{ required: true, message: '请选择围岩等级' }]}
+                  >
+                    <Select placeholder="请选择围岩等级">
+                      <Select.Option value="I">I</Select.Option>
+                      <Select.Option value="II">II</Select.Option>
+                      <Select.Option value="III">III</Select.Option>
+                      <Select.Option value="IV">IV</Select.Option>
+                      <Select.Option value="V">V</Select.Option>
+                      <Select.Option value="VI">VI</Select.Option>
+                    </Select>
+                  </Form.Item>
+
+                  {/* 里程冠号 */}
+                  <Form.Item
+                    label="里程冠号"
+                    field="mileagePrefix"
+                    rules={[{ required: true, message: '请输入里程冠号' }]}
+                  >
+                    <Input placeholder="DK" />
+                  </Form.Item>
+                </div>
+
+                {/* 开始里程 */}
+                <Form.Item label="开始里程" required>
+                  <Space>
+                    <Form.Item
+                      field="startMileageMain"
+                      noStyle
+                      rules={[{ required: true, message: '请输入' }]}
+                    >
+                      <InputNumber placeholder="713" style={{ width: '150px' }} />
+                    </Form.Item>
+                    <span style={{ fontSize: '16px', color: '#1d2129' }}>+</span>
+                    <Form.Item
+                      field="startMileageSub"
+                      noStyle
+                      rules={[{ required: true, message: '请输入' }]}
+                    >
+                      <InputNumber placeholder="485" style={{ width: '150px' }} />
+                    </Form.Item>
+                  </Space>
+                </Form.Item>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
+                  {/* 预报长度 */}
+                  <Form.Item
+                    label="预报长度"
+                    field="length"
+                    rules={[{ required: true, message: '请输入预报长度' }]}
+                  >
+                    <InputNumber placeholder="-205.00" style={{ width: '100%' }} />
+                  </Form.Item>
+
+                  {/* 填写人 */}
+                  <Form.Item
+                    label="填写人"
+                    field="author"
+                    rules={[{ required: true, message: '请选择填写人' }]}
+                  >
+                    <Select placeholder="请选择填写人">
+                      <Select.Option value="一分部">一分部</Select.Option>
+                      <Select.Option value="二分部">二分部</Select.Option>
+                      <Select.Option value="三分部">三分部</Select.Option>
+                      <Select.Option value="其他">其他</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </div>
+
+                {/* 修改原因说明 */}
+                <Form.Item
+                  label="修改原因说明"
+                  field="modifyReason"
+                  rules={[{ required: true, message: '请输入修改原因说明' }]}
+                >
+                  <TextArea
+                    placeholder="请输入修改原因"
+                    rows={3}
+                    style={{ resize: 'none' }}
+                  />
+                </Form.Item>
+              </Form>
+            </TabPane>
+
+            {/* 地表信息选项卡 */}
+            <TabPane key="2" title="地表信息">
+              <div style={{ 
+                padding: '20px 0',
+                borderTop: '1px solid #e5e6eb',
+                marginTop: '10px'
+              }}>
+                <div style={{ 
+                  fontSize: '14px', 
+                  color: '#1d2129', 
+                  fontWeight: 500,
+                  marginBottom: '20px',
+                  paddingBottom: '12px',
+                  borderBottom: '1px solid #e5e6eb'
+                }}>
+                  其他地表信息
+                </div>
+                
+                <Form
+                  form={editForm}
+                  layout="vertical"
+                  autoComplete="off"
+                >
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
+                    {/* 地层岩性描述 */}
+                    <Form.Item
+                      label="地层岩性描述"
+                      field="surfaceStratumDescription"
+                      rules={[
+                        { required: true, message: '请输入地层岩性描述' },
+                        { maxLength: 256, message: '最多256个字符' }
+                      ]}
+                    >
+                      <TextArea
+                        placeholder="文字描述（必填）"
+                        rows={4}
+                        maxLength={256}
+                        showWordLimit
+                        style={{ resize: 'none' }}
+                      />
+                    </Form.Item>
+
+                    {/* 地表岩溶描述 */}
+                    <Form.Item
+                      label="地表岩溶描述"
+                      field="surfaceKarstDescription"
+                      rules={[
+                        { required: true, message: '请输入地表岩溶描述' },
+                        { maxLength: 256, message: '最多256个字符' }
+                      ]}
+                    >
+                      <TextArea
+                        placeholder="文字描述（必填）"
+                        rows={4}
+                        maxLength={256}
+                        showWordLimit
+                        style={{ resize: 'none' }}
+                      />
+                    </Form.Item>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
+                    {/* 特殊地质产状描述 */}
+                    <Form.Item
+                      label="特殊地质产状描述"
+                      field="surfaceSpecialGeologyDescription"
+                      rules={[
+                        { required: true, message: '请输入特殊地质产状描述' },
+                        { maxLength: 256, message: '最多256个字符' }
+                      ]}
+                    >
+                      <TextArea
+                        placeholder="文字描述（必填）"
+                        rows={4}
+                        maxLength={256}
+                        showWordLimit
+                        style={{ resize: 'none' }}
+                      />
+                    </Form.Item>
+
+                    {/* 人为坑道描述 */}
+                    <Form.Item
+                      label="人为坑道描述"
+                      field="surfaceTunnelDescription"
+                      rules={[
+                        { required: true, message: '请输入人为坑道描述' },
+                        { maxLength: 256, message: '最多256个字符' }
+                      ]}
+                    >
+                      <TextArea
+                        placeholder="文字描述（必填）"
+                        rows={4}
+                        maxLength={256}
+                        showWordLimit
+                        style={{ resize: 'none' }}
+                      />
+                    </Form.Item>
+                  </div>
+
+                  {/* 地质评定 */}
+                  <Form.Item
+                    label="地质评定"
+                    field="surfaceGeologyAssessment"
+                    rules={[
+                      { required: true, message: '请输入地质评定' },
+                      { maxLength: 256, message: '最多256个字符' }
+                    ]}
+                  >
+                    <TextArea
+                      placeholder="文字描述（必填）"
+                      rows={4}
+                      maxLength={256}
+                      showWordLimit
+                      style={{ resize: 'none' }}
+                    />
+                  </Form.Item>
+                </Form>
+              </div>
+            </TabPane>
+
+            {/* 分段信息选项卡 */}
+            <TabPane key="3" title="分段信息">
+              <div style={{ padding: '40px 0', textAlign: 'center', color: '#86909c' }}>
+                分段信息功能开发中...
+              </div>
+            </TabPane>
+
+            {/* 图片上传选项卡 */}
+            <TabPane key="4" title="图片上传">
+              <div style={{ padding: '20px 0' }}>
+                <Upload
+                  drag
+                  multiple
+                  accept="image/*"
+                  onChange={(fileList) => {
+                    console.log('图片列表:', fileList)
+                  }}
+                  tip="支持格式：.jpg, .png, .gif"
+                >
+                  <div style={{ 
+                    padding: '40px',
+                    textAlign: 'center',
+                    color: '#86909c'
+                  }}>
+                    <div style={{ fontSize: '48px', marginBottom: '16px' }}>🖼️</div>
+                    <div style={{ fontSize: '14px' }}>
+                      点击或拖拽图片到此区域上传
+                    </div>
+                    <div style={{ fontSize: '12px', marginTop: '8px', color: '#c9cdd4' }}>
+                      支持单个或批量上传
+                    </div>
+                  </div>
+                </Upload>
+              </div>
+            </TabPane>
+          </Tabs>
         </Modal>
       </Content>
     </Layout>
