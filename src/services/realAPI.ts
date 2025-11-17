@@ -4,10 +4,217 @@
  * 基于Swagger API文档: http://121.40.127.120:8080/swagger-ui/index.html
  */
 
-import { get } from '../utils/api';
+import { get, post, put, del } from '../utils/api';
 import type { Tunnel, WorkPoint, Project } from './geoForecastAPI';
 
 // ==================== 后端API响应类型定义 ====================
+
+// 通用响应格式
+export interface BaseResponse<T = any> {
+  resultcode: number;
+  message: string;
+  data: T;
+}
+
+// 分页响应格式
+export interface PageResponse<T = any> {
+  current: number;
+  size: number;
+  records: T[];
+  total: number;
+  pages: number;
+}
+
+// ==================== 请求数据类型定义 ====================
+
+// 设计围岩等级请求类型
+export interface DesignRockGradeRequest {
+  sitePk: number;        // 工点主键
+  dkname: string;        // 里程冠号
+  dkilo: number;         // 里程公里数
+  sjwydjLength: number;  // 预报长度
+  wydj: number;          // 围岩等级 (1-6)
+  revise?: string;       // 修改原因
+  username: string;      // 填写人
+}
+
+// 设计预报方法请求类型
+export interface DesignForecastRequest {
+  sitePk: number;        // 工点主键
+  method: number;        // 预报方法代码
+  dkname: string;        // 里程冠号
+  dkilo: number;         // 起点里程
+  sjybLength: number;    // 预报长度
+  zxms?: number;         // 最小埋深
+  plannum?: number;      // 设计次数
+  plantime?: string;     // 计划时间
+}
+
+// 设计地质信息请求类型
+export interface DesignGeologyRequest {
+  sitePk: number;        // 工点主键
+  method: number;        // 方法代码
+  dkname: string;        // 里程冠号
+  dkilo: number;         // 起点里程
+  sjdzLength: number;    // 长度
+  revise?: string;       // 修改原因
+  username: string;      // 填写人
+}
+
+// 物探法请求类型
+export interface GeophysicalRequest {
+  sitePk: number;        // 工点主键
+  method: number;        // 方法代码 (1:TSP; 2:HSP; 3:陆地声呐; 4:电磁波反射; 5:高分辨直流电; 6:瞬变电磁; 9:微震监测; 0:其他)
+  dkname: string;        // 里程冠号
+  dkilo: number;         // 里程公里数
+  wtfLength: number;     // 长度
+  monitordate?: string;  // 监测日期
+  originalfile?: string; // 原始文件
+  addition?: string;     // 附加信息
+  images?: string;       // 图片
+}
+
+// 钻探法请求类型
+export interface DrillingRequest {
+  sitePk: number;        // 工点主键
+  method: number;        // 方法代码
+  dkname: string;        // 里程冠号
+  dkilo: number;         // 里程公里数
+  ztfLength: number;     // 长度
+  monitordate?: string;  // 监测日期
+  originalfile?: string; // 原始文件
+  addition?: string;     // 附加信息
+}
+
+// 掌子面素描请求类型
+export interface FaceSketchRequest {
+  sitePk: number;        // 工点主键
+  dkname: string;        // 里程冠号
+  dkilo: number;         // 里程公里数
+  zzmsmLength: number;   // 长度
+  monitordate?: string;  // 监测日期
+  originalfile?: string; // 原始文件
+  addition?: string;     // 附加信息
+  images?: string;       // 图片
+}
+
+// 洞身素描请求类型
+export interface TunnelSketchRequest {
+  sitePk: number;        // 工点主键
+  dkname: string;        // 里程冠号
+  dkilo: number;         // 里程公里数
+  dssmLength: number;    // 长度
+  monitordate?: string;  // 监测日期
+  originalfile?: string; // 原始文件
+  addition?: string;     // 附加信息
+  images?: string;       // 图片
+}
+
+// 地表补充请求类型
+export interface SurfaceSupplementRequest {
+  sitePk: number;        // 工点主键
+  dkname: string;        // 里程冠号
+  dkilo: number;         // 里程公里数
+  dbbcLength: number;    // 长度
+  monitordate?: string;  // 监测日期
+  originalfile?: string; // 原始文件
+  addition?: string;     // 附加信息
+}
+
+// ==================== 响应数据类型定义 ====================
+
+// 设计围岩等级响应类型
+export interface DesignRockGrade {
+  sjwydjPk: number;
+  sjwydjId: number;
+  sitePk: number;
+  dkname: string;
+  dkilo: number;
+  sjwydjLength: number;
+  wydj: number;
+  revise?: string;
+  username: string;
+  gmtCreate: string;
+  gmtModified: string;
+}
+
+// 设计地质信息响应类型
+export interface DesignGeology {
+  sjdzPk: number;
+  sjdzId: number;
+  sitePk: number;
+  dkname: string;
+  dkilo: number;
+  sjdzLength: number;
+  method: number;
+  revise?: string;
+  username: string;
+  gmtCreate: string;
+  gmtModified: string;
+}
+
+// 钻探法响应类型
+export interface DrillingMethod {
+  ztfPk: number;
+  ztfId: string;
+  sitePk: number;
+  method: number;
+  dkname: string;
+  dkilo: number;
+  ztfLength: number;
+  monitordate?: string;
+  originalfile?: string;
+  addition?: string;
+  gmtCreate: string;
+  gmtModified: string;
+}
+
+// 掌子面素描响应类型
+export interface FaceSketch {
+  zzmsmPk: number;
+  zzmsmId: string;
+  sitePk: number;
+  dkname: string;
+  dkilo: number;
+  zzmsmLength: number;
+  monitordate?: string;
+  originalfile?: string;
+  addition?: string;
+  images?: string;
+  gmtCreate: string;
+  gmtModified: string;
+}
+
+// 洞身素描响应类型
+export interface TunnelSketch {
+  dssmPk: number;
+  dssmId: string;
+  sitePk: number;
+  dkname: string;
+  dkilo: number;
+  dssmLength: number;
+  monitordate?: string;
+  originalfile?: string;
+  addition?: string;
+  images?: string;
+  gmtCreate: string;
+  gmtModified: string;
+}
+
+// 地表补充响应类型
+export interface SurfaceSupplement {
+  dbbcPk: number;
+  dbbcId: string;
+  sitePk: number;
+  dkname: string;
+  dkilo: number;
+  dbbcLength: number;
+  monitordate?: string;
+  originalfile?: string;
+  addition?: string;
+  gmtCreate: string;
+  gmtModified: string;
+}
 
 // 标段（Bid Section）类型
 export interface BidSection {
@@ -890,24 +1097,775 @@ class RealAPIService {
   }
 
   async createForecastDesign(data: Omit<ForecastDesignRecord, 'id' | 'createdAt'>): Promise<{ success: boolean }> {
-    return { success: false };
+    try {
+      // 转换前端数据格式为后端格式
+      const requestData: DesignForecastRequest = {
+        sitePk: 1, // 默认工点，实际应该从参数传入
+        method: this.getMethodCode(data.method),
+        dkname: this.extractMileagePrefix(data.startMileage),
+        dkilo: this.extractMileageNumber(data.startMileage),
+        sjybLength: data.length,
+        zxms: data.minBurialDepth,
+        plannum: data.designTimes,
+        plantime: new Date().toISOString()
+      };
+
+      const response = await post<BaseResponse>('/api/v1/sjyb', requestData);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] createForecastDesign 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] createForecastDesign 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] createForecastDesign 异常:', error);
+      return { success: false };
+    }
+  }
+
+  async updateForecastDesign(id: string, data: Omit<ForecastDesignRecord, 'id' | 'createdAt'>): Promise<{ success: boolean }> {
+    try {
+      const requestData: DesignForecastRequest = {
+        sitePk: 1,
+        method: this.getMethodCode(data.method),
+        dkname: this.extractMileagePrefix(data.startMileage),
+        dkilo: this.extractMileageNumber(data.startMileage),
+        sjybLength: data.length,
+        zxms: data.minBurialDepth,
+        plannum: data.designTimes,
+        plantime: new Date().toISOString()
+      };
+
+      const response = await put<BaseResponse>(`/api/v1/sjyb/${id}`, requestData);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] updateForecastDesign 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] updateForecastDesign 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] updateForecastDesign 异常:', error);
+      return { success: false };
+    }
   }
 
   async deleteForecastDesign(id: string): Promise<{ success: boolean }> {
-    return { success: false };
+    try {
+      const response = await del<BaseResponse>(`/api/v1/sjyb/${id}`);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] deleteForecastDesign 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] deleteForecastDesign 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] deleteForecastDesign 异常:', error);
+      return { success: false };
+    }
   }
 
   async batchDeleteForecastDesigns(ids: string[]): Promise<{ success: boolean }> {
-    return { success: false };
+    try {
+      // 批量删除：逐个调用删除接口
+      const results = await Promise.allSettled(
+        ids.map(id => this.deleteForecastDesign(id))
+      );
+      
+      const successCount = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+      const success = successCount === ids.length;
+      
+      console.log(`✅ [realAPI] batchDeleteForecastDesigns 完成: ${successCount}/${ids.length}`);
+      return { success };
+    } catch (error) {
+      console.error('❌ [realAPI] batchDeleteForecastDesigns 异常:', error);
+      return { success: false };
+    }
   }
 
   async importForecastDesigns(file: File): Promise<{ success: boolean; added: number }> {
-    return { success: false, added: 0 };
+    try {
+      // TODO: 实现Excel导入功能
+      // 这需要后端提供专门的导入接口
+      console.warn('⚠️ [realAPI] importForecastDesigns 功能待实现');
+      return { success: false, added: 0 };
+    } catch (error) {
+      console.error('❌ [realAPI] importForecastDesigns 异常:', error);
+      return { success: false, added: 0 };
+    }
   }
 
   getTemplateDownloadUrl(): string {
     const baseURL = process.env.REACT_APP_API_BASE_URL || '';
     return `${baseURL}/api/forecast/designs/template`;
+  }
+
+  // ========== 设计围岩等级 CRUD ==========
+
+  /**
+   * 获取设计围岩等级列表
+   */
+  async getDesignRockGrades(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
+    try {
+      const response = await get<BaseResponse<{ sjwydjIPage: PageResponse<DesignRockGrade> }>>('/api/v1/sjwydj/list', {
+        params: {
+          userid: params.userid || this.userId,
+          pageNum: params.pageNum || 1,
+          pageSize: params.pageSize || 15,
+          ...params
+        }
+      });
+      return response.data.sjwydjIPage;
+    } catch (error) {
+      console.error('❌ [realAPI] getDesignRockGrades 失败:', error);
+      return { current: 1, size: 15, records: [], total: 0, pages: 0 };
+    }
+  }
+
+  /**
+   * 获取设计围岩等级详情
+   */
+  async getDesignRockGradeById(id: string) {
+    try {
+      const response = await get<BaseResponse<{ sjwydj: DesignRockGrade }>>(`/api/v1/sjwydj/${id}`);
+      return response.data.sjwydj;
+    } catch (error) {
+      console.error('❌ [realAPI] getDesignRockGradeById 失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 创建设计围岩等级
+   */
+  async createDesignRockGrade(data: DesignRockGradeRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await post<BaseResponse>('/api/v1/sjwydj', data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] createDesignRockGrade 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] createDesignRockGrade 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] createDesignRockGrade 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 更新设计围岩等级
+   */
+  async updateDesignRockGrade(id: string, data: DesignRockGradeRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await put<BaseResponse>(`/api/v1/sjwydj/${id}`, data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] updateDesignRockGrade 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] updateDesignRockGrade 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] updateDesignRockGrade 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 删除设计围岩等级
+   */
+  async deleteDesignRockGrade(id: string): Promise<{ success: boolean }> {
+    try {
+      const response = await del<BaseResponse>(`/api/v1/sjwydj/${id}`);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] deleteDesignRockGrade 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] deleteDesignRockGrade 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] deleteDesignRockGrade 异常:', error);
+      return { success: false };
+    }
+  }
+
+  // ========== 设计地质信息 CRUD ==========
+
+  /**
+   * 获取设计地质信息列表
+   */
+  async getDesignGeologies(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
+    try {
+      const response = await get<BaseResponse<{ sjdzIPage: PageResponse<DesignGeology> }>>('/api/v1/sjdz/list', {
+        params: {
+          userid: params.userid || this.userId,
+          pageNum: params.pageNum || 1,
+          pageSize: params.pageSize || 15,
+          ...params
+        }
+      });
+      return response.data.sjdzIPage;
+    } catch (error) {
+      console.error('❌ [realAPI] getDesignGeologies 失败:', error);
+      return { current: 1, size: 15, records: [], total: 0, pages: 0 };
+    }
+  }
+
+  /**
+   * 创建设计地质信息
+   */
+  async createDesignGeology(data: DesignGeologyRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await post<BaseResponse>('/api/v1/sjdz', data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] createDesignGeology 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] createDesignGeology 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] createDesignGeology 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 更新设计地质信息
+   */
+  async updateDesignGeology(id: string, data: DesignGeologyRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await put<BaseResponse>(`/api/v1/sjdz/${id}`, data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] updateDesignGeology 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] updateDesignGeology 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] updateDesignGeology 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 删除设计地质信息
+   */
+  async deleteDesignGeology(id: string): Promise<{ success: boolean }> {
+    try {
+      const response = await del<BaseResponse>(`/api/v1/sjdz/${id}`);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] deleteDesignGeology 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] deleteDesignGeology 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] deleteDesignGeology 异常:', error);
+      return { success: false };
+    }
+  }
+
+  // ========== 物探法 CRUD ==========
+
+  /**
+   * 获取物探法列表
+   */
+  async getGeophysicalMethods(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
+    try {
+      const response = await get<BaseResponse<{ wtfIPage: PageResponse<GeophysicalMethod> }>>('/api/v1/wtf/list', {
+        params: {
+          userid: params.userid || this.userId,
+          pageNum: params.pageNum || 1,
+          pageSize: params.pageSize || 15,
+          ...params
+        }
+      });
+      return response.data.wtfIPage;
+    } catch (error) {
+      console.error('❌ [realAPI] getGeophysicalMethods 失败:', error);
+      return { current: 1, size: 15, records: [], total: 0, pages: 0 };
+    }
+  }
+
+  /**
+   * 创建物探法记录
+   */
+  async createGeophysicalMethod(data: GeophysicalRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await post<BaseResponse>('/api/v1/wtf', data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] createGeophysicalMethod 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] createGeophysicalMethod 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] createGeophysicalMethod 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 更新物探法记录
+   */
+  async updateGeophysicalMethod(id: string, data: GeophysicalRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await put<BaseResponse>(`/api/v1/wtf/${id}`, data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] updateGeophysicalMethod 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] updateGeophysicalMethod 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] updateGeophysicalMethod 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 删除物探法记录
+   */
+  async deleteGeophysicalMethod(id: string): Promise<{ success: boolean }> {
+    try {
+      const response = await del<BaseResponse>(`/api/v1/wtf/${id}`);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] deleteGeophysicalMethod 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] deleteGeophysicalMethod 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] deleteGeophysicalMethod 异常:', error);
+      return { success: false };
+    }
+  }
+
+  // ========== 钻探法 CRUD ==========
+
+  /**
+   * 获取钻探法列表
+   */
+  async getDrillingMethods(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
+    try {
+      const response = await get<BaseResponse<{ ztfIPage: PageResponse<DrillingMethod> }>>('/api/v1/ztf/list', {
+        params: {
+          userid: params.userid || this.userId,
+          pageNum: params.pageNum || 1,
+          pageSize: params.pageSize || 15,
+          ...params
+        }
+      });
+      return response.data.ztfIPage;
+    } catch (error) {
+      console.error('❌ [realAPI] getDrillingMethods 失败:', error);
+      return { current: 1, size: 15, records: [], total: 0, pages: 0 };
+    }
+  }
+
+  /**
+   * 创建钻探法记录
+   */
+  async createDrillingMethod(data: DrillingRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await post<BaseResponse>('/api/v1/ztf', data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] createDrillingMethod 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] createDrillingMethod 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] createDrillingMethod 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 更新钻探法记录
+   */
+  async updateDrillingMethod(id: string, data: DrillingRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await put<BaseResponse>(`/api/v1/ztf/${id}`, data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] updateDrillingMethod 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] updateDrillingMethod 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] updateDrillingMethod 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 删除钻探法记录
+   */
+  async deleteDrillingMethod(id: string): Promise<{ success: boolean }> {
+    try {
+      const response = await del<BaseResponse>(`/api/v1/ztf/${id}`);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] deleteDrillingMethod 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] deleteDrillingMethod 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] deleteDrillingMethod 异常:', error);
+      return { success: false };
+    }
+  }
+
+  // ========== 掌子面素描 CRUD ==========
+
+  /**
+   * 获取掌子面素描列表
+   */
+  async getFaceSketches(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
+    try {
+      const response = await get<BaseResponse<{ zzmsmIPage: PageResponse<FaceSketch> }>>('/api/v1/zzmsm/list', {
+        params: {
+          userid: params.userid || this.userId,
+          pageNum: params.pageNum || 1,
+          pageSize: params.pageSize || 15,
+          ...params
+        }
+      });
+      return response.data.zzmsmIPage;
+    } catch (error) {
+      console.error('❌ [realAPI] getFaceSketches 失败:', error);
+      return { current: 1, size: 15, records: [], total: 0, pages: 0 };
+    }
+  }
+
+  /**
+   * 创建掌子面素描记录
+   */
+  async createFaceSketch(data: FaceSketchRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await post<BaseResponse>('/api/v1/zzmsm', data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] createFaceSketch 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] createFaceSketch 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] createFaceSketch 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 更新掌子面素描记录
+   */
+  async updateFaceSketch(id: string, data: FaceSketchRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await put<BaseResponse>(`/api/v1/zzmsm/${id}`, data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] updateFaceSketch 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] updateFaceSketch 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] updateFaceSketch 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 删除掌子面素描记录
+   */
+  async deleteFaceSketch(id: string): Promise<{ success: boolean }> {
+    try {
+      const response = await del<BaseResponse>(`/api/v1/zzmsm/${id}`);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] deleteFaceSketch 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] deleteFaceSketch 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] deleteFaceSketch 异常:', error);
+      return { success: false };
+    }
+  }
+
+  // ========== 洞身素描 CRUD ==========
+
+  /**
+   * 获取洞身素描列表
+   */
+  async getTunnelSketches(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
+    try {
+      const response = await get<BaseResponse<{ dssmIPage: PageResponse<TunnelSketch> }>>('/api/v1/dssm/list', {
+        params: {
+          userid: params.userid || this.userId,
+          pageNum: params.pageNum || 1,
+          pageSize: params.pageSize || 15,
+          ...params
+        }
+      });
+      return response.data.dssmIPage;
+    } catch (error) {
+      console.error('❌ [realAPI] getTunnelSketches 失败:', error);
+      return { current: 1, size: 15, records: [], total: 0, pages: 0 };
+    }
+  }
+
+  /**
+   * 创建洞身素描记录
+   */
+  async createTunnelSketch(data: TunnelSketchRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await post<BaseResponse>('/api/v1/dssm', data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] createTunnelSketch 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] createTunnelSketch 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] createTunnelSketch 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 更新洞身素描记录
+   */
+  async updateTunnelSketch(id: string, data: TunnelSketchRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await put<BaseResponse>(`/api/v1/dssm/${id}`, data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] updateTunnelSketch 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] updateTunnelSketch 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] updateTunnelSketch 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 删除洞身素描记录
+   */
+  async deleteTunnelSketch(id: string): Promise<{ success: boolean }> {
+    try {
+      const response = await del<BaseResponse>(`/api/v1/dssm/${id}`);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] deleteTunnelSketch 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] deleteTunnelSketch 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] deleteTunnelSketch 异常:', error);
+      return { success: false };
+    }
+  }
+
+  // ========== 地表补充 CRUD ==========
+
+  /**
+   * 获取地表补充列表
+   */
+  async getSurfaceSupplements(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
+    try {
+      const response = await get<BaseResponse<{ dbbcIPage: PageResponse<SurfaceSupplement> }>>('/api/v1/dbbc/list', {
+        params: {
+          userid: params.userid || this.userId,
+          pageNum: params.pageNum || 1,
+          pageSize: params.pageSize || 15,
+          ...params
+        }
+      });
+      return response.data.dbbcIPage;
+    } catch (error) {
+      console.error('❌ [realAPI] getSurfaceSupplements 失败:', error);
+      return { current: 1, size: 15, records: [], total: 0, pages: 0 };
+    }
+  }
+
+  /**
+   * 创建地表补充记录
+   */
+  async createSurfaceSupplement(data: SurfaceSupplementRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await post<BaseResponse>('/api/v1/dbbc', data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] createSurfaceSupplement 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] createSurfaceSupplement 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] createSurfaceSupplement 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 更新地表补充记录
+   */
+  async updateSurfaceSupplement(id: string, data: SurfaceSupplementRequest): Promise<{ success: boolean }> {
+    try {
+      const response = await put<BaseResponse>(`/api/v1/dbbc/${id}`, data);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] updateSurfaceSupplement 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] updateSurfaceSupplement 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] updateSurfaceSupplement 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 删除地表补充记录
+   */
+  async deleteSurfaceSupplement(id: string): Promise<{ success: boolean }> {
+    try {
+      const response = await del<BaseResponse>(`/api/v1/dbbc/${id}`);
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] deleteSurfaceSupplement 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] deleteSurfaceSupplement 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] deleteSurfaceSupplement 异常:', error);
+      return { success: false };
+    }
+  }
+
+  // ========== 数据转换辅助方法 ==========
+
+  /**
+   * 将前端方法名转换为后端方法代码
+   */
+  private getMethodCode(methodName: string): number {
+    const methodMap: Record<string, number> = {
+      '其他': 0,
+      '地震波反射': 1,
+      '水平声波剖面': 2,
+      'HSP': 2,
+      '陆地声呐': 3,
+      '电磁波反射': 4,
+      '高分辨直流电': 5,
+      '瞬变电磁': 6,
+      '掌子面素描': 7,
+      '洞身素描': 8,
+      '地表补充': 12,
+      '超前水平钻': 13,
+      '加深炮孔': 14,
+      '全部': 99,
+    };
+    return methodMap[methodName] || 0;
+  }
+
+  /**
+   * 从里程字符串中提取前缀 (如: "DK713+920" -> "DK")
+   */
+  private extractMileagePrefix(mileage: string): string {
+    const match = mileage.match(/^([A-Z]+)/);
+    return match ? match[1] : 'DK';
+  }
+
+  /**
+   * 从里程字符串中提取数字 (如: "DK713+920" -> 713.920)
+   */
+  private extractMileageNumber(mileage: string): number {
+    const match = mileage.match(/([0-9]+)(?:\+([0-9]+))?/);
+    if (match) {
+      const km = parseInt(match[1]) || 0;
+      const m = parseInt(match[2]) || 0;
+      return km + (m / 1000);
+    }
+    return 0;
+  }
+
+  /**
+   * 将围岩等级罗马数字转换为数字
+   */
+  private getRockGradeNumber(grade: string): number {
+    const gradeMap: Record<string, number> = {
+      'I': 1,
+      'II': 2,
+      'III': 3,
+      'IV': 4,
+      'V': 5,
+      'VI': 6
+    };
+    return gradeMap[grade] || 4;
+  }
+
+  /**
+   * 将围岩等级数字转换为罗马数字
+   */
+  private getRockGradeLabel(grade: number): string {
+    const gradeMap: Record<number, string> = {
+      1: 'I',
+      2: 'II',
+      3: 'III',
+      4: 'IV',
+      5: 'V',
+      6: 'VI'
+    };
+    return gradeMap[grade] || 'IV';
   }
 }
 

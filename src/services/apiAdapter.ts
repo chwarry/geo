@@ -228,6 +228,156 @@ class APIAdapter {
     }
   }
 
+  // ========== 设计围岩等级 CRUD ==========
+
+  /**
+   * 获取设计围岩等级列表
+   */
+  async getDesignRockGrades(params?: { sitePk?: number; pageNum?: number; pageSize?: number }) {
+    if (USE_REAL_API) {
+      return realAPI.getDesignRockGrades(params || {});
+    } else {
+      // Mock实现
+      return this.generateMockRockGrades(params);
+    }
+  }
+
+  /**
+   * 创建设计围岩等级
+   */
+  async createDesignRockGrade(data: any): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.createDesignRockGrade(data);
+    } else {
+      console.log('🎭 [apiAdapter] Mock createDesignRockGrade:', data);
+      return { success: true };
+    }
+  }
+
+  /**
+   * 更新设计围岩等级
+   */
+  async updateDesignRockGrade(id: string, data: any): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.updateDesignRockGrade(id, data);
+    } else {
+      console.log('🎭 [apiAdapter] Mock updateDesignRockGrade:', id, data);
+      return { success: true };
+    }
+  }
+
+  /**
+   * 删除设计围岩等级
+   */
+  async deleteDesignRockGrade(id: string): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.deleteDesignRockGrade(id);
+    } else {
+      console.log('🎭 [apiAdapter] Mock deleteDesignRockGrade:', id);
+      return { success: true };
+    }
+  }
+
+  // ========== 设计地质信息 CRUD ==========
+
+  /**
+   * 获取设计地质信息列表
+   */
+  async getDesignGeologies(params?: { sitePk?: number; pageNum?: number; pageSize?: number }) {
+    if (USE_REAL_API) {
+      return realAPI.getDesignGeologies(params || {});
+    } else {
+      // Mock实现
+      return this.generateMockGeologies(params);
+    }
+  }
+
+  /**
+   * 创建设计地质信息
+   */
+  async createDesignGeology(data: any): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.createDesignGeology(data);
+    } else {
+      console.log('🎭 [apiAdapter] Mock createDesignGeology:', data);
+      return { success: true };
+    }
+  }
+
+  /**
+   * 更新设计地质信息
+   */
+  async updateDesignGeology(id: string, data: any): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.updateDesignGeology(id, data);
+    } else {
+      console.log('🎭 [apiAdapter] Mock updateDesignGeology:', id, data);
+      return { success: true };
+    }
+  }
+
+  /**
+   * 删除设计地质信息
+   */
+  async deleteDesignGeology(id: string): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.deleteDesignGeology(id);
+    } else {
+      console.log('🎭 [apiAdapter] Mock deleteDesignGeology:', id);
+      return { success: true };
+    }
+  }
+
+  // ========== 物探法 CRUD ==========
+
+  /**
+   * 获取物探法列表
+   */
+  async getGeophysicalMethods(params?: { sitePk?: number; pageNum?: number; pageSize?: number }) {
+    if (USE_REAL_API) {
+      return realAPI.getGeophysicalMethods(params || {});
+    } else {
+      // Mock实现
+      return this.generateMockGeophysicalMethods(params);
+    }
+  }
+
+  /**
+   * 创建物探法记录
+   */
+  async createGeophysicalMethod(data: any): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.createGeophysicalMethod(data);
+    } else {
+      console.log('🎭 [apiAdapter] Mock createGeophysicalMethod:', data);
+      return { success: true };
+    }
+  }
+
+  /**
+   * 更新物探法记录
+   */
+  async updateGeophysicalMethod(id: string, data: any): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.updateGeophysicalMethod(id, data);
+    } else {
+      console.log('🎭 [apiAdapter] Mock updateGeophysicalMethod:', id, data);
+      return { success: true };
+    }
+  }
+
+  /**
+   * 删除物探法记录
+   */
+  async deleteGeophysicalMethod(id: string): Promise<{ success: boolean }> {
+    if (USE_REAL_API) {
+      return realAPI.deleteGeophysicalMethod(id);
+    } else {
+      console.log('🎭 [apiAdapter] Mock deleteGeophysicalMethod:', id);
+      return { success: true };
+    }
+  }
+
   // ========== Mock数据生成方法 ==========
 
   private generateMockDetectionData(workPointId: string) {
@@ -336,6 +486,110 @@ class APIAdapter {
     }
     
     return { list, total };
+  }
+
+  private generateMockRockGrades(params?: { pageNum?: number; pageSize?: number }) {
+    const pageSize = params?.pageSize || 15;
+    const total = Math.floor(Math.random() * 50) + 20;
+    const records = [];
+    
+    for (let i = 0; i < Math.min(pageSize, total); i++) {
+      records.push({
+        sjwydjPk: i + 1,
+        sjwydjId: i + 1,
+        sitePk: 1,
+        dkname: 'DK',
+        dkilo: 713 + Math.random() * 10,
+        sjwydjLength: Math.floor(Math.random() * 500) + 50,
+        wydj: Math.floor(Math.random() * 6) + 1, // 1-6
+        revise: ['初次设计', '修改设计', '补充设计'][Math.floor(Math.random() * 3)],
+        username: ['一分部', '二分部', '三分部'][Math.floor(Math.random() * 3)],
+        gmtCreate: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}T${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`,
+        gmtModified: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}T${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`
+      });
+    }
+    
+    return {
+      current: params?.pageNum || 1,
+      size: pageSize,
+      records,
+      total,
+      pages: Math.ceil(total / pageSize)
+    };
+  }
+
+  private generateMockGeologies(params?: { pageNum?: number; pageSize?: number }) {
+    const pageSize = params?.pageSize || 15;
+    const total = Math.floor(Math.random() * 40) + 15;
+    const records = [];
+    
+    for (let i = 0; i < Math.min(pageSize, total); i++) {
+      records.push({
+        sjdzPk: i + 1,
+        sjdzId: i + 1,
+        sitePk: 1,
+        dkname: 'DK',
+        dkilo: 713 + Math.random() * 10,
+        sjdzLength: Math.floor(Math.random() * 300) + 30,
+        method: Math.floor(Math.random() * 5) + 1,
+        revise: ['地质调查', '补充勘探', '详细勘探'][Math.floor(Math.random() * 3)],
+        username: ['地质组', '勘探组', '设计组'][Math.floor(Math.random() * 3)],
+        gmtCreate: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}T${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`,
+        gmtModified: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}T${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`
+      });
+    }
+    
+    return {
+      current: params?.pageNum || 1,
+      size: pageSize,
+      records,
+      total,
+      pages: Math.ceil(total / pageSize)
+    };
+  }
+
+  private generateMockGeophysicalMethods(params?: { pageNum?: number; pageSize?: number }) {
+    const pageSize = params?.pageSize || 15;
+    const total = Math.floor(Math.random() * 60) + 30;
+    const records = [];
+    
+    const methods = [
+      { code: 1, name: 'TSP' },
+      { code: 2, name: 'HSP' },
+      { code: 3, name: '陆地声呐' },
+      { code: 4, name: '电磁波反射' },
+      { code: 5, name: '高分辨直流电' },
+      { code: 6, name: '瞬变电磁' },
+      { code: 9, name: '微震监测' }
+    ];
+    
+    for (let i = 0; i < Math.min(pageSize, total); i++) {
+      const method = methods[Math.floor(Math.random() * methods.length)];
+      records.push({
+        wtfPk: i + 1,
+        wtfId: `wtf_${i + 1}`,
+        sitePk: 1,
+        ybPk: Math.floor(Math.random() * 10) + 1,
+        method: method.code,
+        dkname: 'DK',
+        dkilo: 713 + Math.random() * 10,
+        wtfLength: Math.floor(Math.random() * 200) + 50,
+        monitordate: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
+        originalfile: `${method.name}_${i + 1}.dat`,
+        addition: `${method.name}探测记录`,
+        images: `${method.name}_${i + 1}.jpg`,
+        gmtCreate: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}T${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`,
+        gmtModified: `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}T${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}:00`
+      });
+    }
+    
+    return {
+      current: params?.pageNum || 1,
+      size: pageSize,
+      records,
+      total,
+      pages: Math.ceil(total / pageSize)
+    };
   }
 }
 

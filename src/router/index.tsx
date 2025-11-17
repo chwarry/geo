@@ -2,6 +2,7 @@ import React from 'react'
 import {createBrowserRouter, Link} from 'react-router-dom'
 import HomePage from '../pages/HomePage'
 import HelloPage from '../pages/HelloPage'
+import LoginPage from '../pages/LoginPage'
 import GeoPointSearch from '../pages/GeoPoint/GeoPointSearch'
 import GeoPointSearchIntegrated from '../pages/GeoPoint/GeoPointSearchIntegrated'
 import ForecastDesignPage from '../pages/ForecastDesignPage'
@@ -12,63 +13,119 @@ import DesignLayout from '../components/DesignLayout'
 import ApiTestPage from '../pages/ApiTestPage'
 import SwaggerAnalyzer from '../pages/SwaggerAnalyzer'
 import BusinessDataPage from '../pages/BusinessDataPage'
+import UserManagementPage from '../pages/UserManagementPage'
+import ProtectedRoute from '../components/ProtectedRoute'
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <HomePage />
+    element: <LoginPage />
+  },
+  {
+    path: '/login',
+    element: <LoginPage />
   },
   {
     path: '/home',
-    element: <HomePage />
+    element: (
+      <ProtectedRoute>
+        <HomePage />
+      </ProtectedRoute>
+    )
   },
   {
     path: '/about',
-    element: <div>About</div>
+    element: (
+      <ProtectedRoute>
+        <div>About</div>
+      </ProtectedRoute>
+    )
   },
   {
     path: '/hello',
-    element: <HelloPage />
+    element: (
+      <ProtectedRoute>
+        <HelloPage />
+      </ProtectedRoute>
+    )
   },
   {
     path: 'geo-search',
-    element: <GeoPointSearch />
+    element: (
+      <ProtectedRoute>
+        <GeoPointSearch />
+      </ProtectedRoute>
+    )
   },
   {
     path: 'geo-search-integrated',
-    element: <GeoPointSearchIntegrated />
+    element: (
+      <ProtectedRoute>
+        <GeoPointSearchIntegrated />
+      </ProtectedRoute>
+    )
   },
   {
     path: 'forecast/design',
     element: (
-      <DesignLayout>
-        <ForecastDesignPage />
-      </DesignLayout>
+      <ProtectedRoute>
+        <DesignLayout>
+          <ForecastDesignPage />
+        </DesignLayout>
+      </ProtectedRoute>
     )
   },
   {
     path: 'forecast/rock',
-    element: <ForecastRockPage />
+    element: (
+      <ProtectedRoute>
+        <ForecastRockPage />
+      </ProtectedRoute>
+    )
   },
   {
     path: 'forecast/geology',
-    element: <ForecastGeologyPage />
+    element: (
+      <ProtectedRoute>
+        <ForecastGeologyPage />
+      </ProtectedRoute>
+    )
   },
   {
     path: 'forecast/comprehensive',
-    element: <ForecastComprehensivePage />
+    element: (
+      <ProtectedRoute>
+        <ForecastComprehensivePage />
+      </ProtectedRoute>
+    )
   },
   {
     path: 'api-test',
-    element: <ApiTestPage />
+    element: (
+      <ProtectedRoute>
+        <ApiTestPage />
+      </ProtectedRoute>
+    )
   },
   {
     path: 'swagger-analyzer',
-    element: <SwaggerAnalyzer />
+    element: (
+      <ProtectedRoute>
+        <SwaggerAnalyzer />
+      </ProtectedRoute>
+    )
   },
   {
     path: 'business-data',
-    element: <BusinessDataPage />
+    element: (
+      <ProtectedRoute>
+        <BusinessDataPage />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: 'user-management',
+    element: <UserManagementPage />
   }
 ])
 

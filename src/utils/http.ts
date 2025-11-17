@@ -1,9 +1,9 @@
-import axios from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 
 // Prefer environment variable so backend URL can be configured without code changes
 const apiBase = process.env.REACT_APP_API_BASE_URL || ''
 
-const http = axios.create({
+const axiosInstance = axios.create({
   baseURL: apiBase,
   timeout: 10000,
 });
@@ -11,7 +11,7 @@ const http = axios.create({
 // Mock adapter has been disabled - we use setupProxy.js for API proxying instead
 // This ensures all /api requests are forwarded to the real backend via the proxy
 
-http.interceptors.request.use(
+axiosInstance.interceptors.request.use(
   (config) => {
     // Add authorization token to headers
     const token = localStorage.getItem('token');
@@ -25,7 +25,7 @@ http.interceptors.request.use(
   }
 );
 
-http.interceptors.response.use(
+axiosInstance.interceptors.response.use(
   (response) => {
     return response.data;
   },
@@ -35,5 +35,17 @@ http.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// 创建类型安全的HTTP客户端，响应拦截器返回response.data
+interface HttpClient {
+  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>;
+  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>;
+  patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+  request<T = any, R = any>(config: AxiosRequestConfig): Promise<R>;
+}
+
+const http: HttpClient = axiosInstance as any;
 
 export default http;

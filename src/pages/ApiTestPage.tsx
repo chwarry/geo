@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Button, Space, Typography, Divider, Table, Message } from '@arco-design/web-react';
 import { get, post, put, del } from '../utils/api';
+import apiAdapter from '../services/apiAdapter';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -408,6 +409,136 @@ const ApiTestPage: React.FC = () => {
     }
   };
 
+  // 测试新的CRUD接口
+  const testDesignRockGrades = async () => {
+    const key = 'rockGrades';
+    setTestLoading(key, true);
+    try {
+      const data = await apiAdapter.getDesignRockGrades({ pageNum: 1, pageSize: 5 });
+      
+      addResult({
+        method: 'GET',
+        url: 'apiAdapter.getDesignRockGrades()',
+        status: 'success',
+        message: `获取设计围岩等级成功！共 ${data.total} 条记录`,
+        data: data
+      });
+      
+      Message.success(`设计围岩等级测试成功！共 ${data.total} 条记录`);
+    } catch (error: any) {
+      addResult({
+        method: 'GET',
+        url: 'apiAdapter.getDesignRockGrades()',
+        status: 'error',
+        message: '获取设计围岩等级失败',
+        error: error.message
+      });
+      Message.error('设计围岩等级测试失败');
+    } finally {
+      setTestLoading(key, false);
+    }
+  };
+
+  const testCreateRockGrade = async () => {
+    const key = 'createRockGrade';
+    setTestLoading(key, true);
+    try {
+      const testData = {
+        sitePk: 1,
+        dkname: 'DK',
+        dkilo: 713.485,
+        sjwydjLength: 100,
+        wydj: 4,
+        revise: '测试创建',
+        username: '测试用户'
+      };
+
+      const result = await apiAdapter.createDesignRockGrade(testData);
+      
+      addResult({
+        method: 'POST',
+        url: 'apiAdapter.createDesignRockGrade()',
+        status: result.success ? 'success' : 'error',
+        message: result.success ? '创建设计围岩等级成功！' : '创建设计围岩等级失败',
+        data: result
+      });
+      
+      if (result.success) {
+        Message.success('创建设计围岩等级成功！');
+      } else {
+        Message.error('创建设计围岩等级失败');
+      }
+    } catch (error: any) {
+      addResult({
+        method: 'POST',
+        url: 'apiAdapter.createDesignRockGrade()',
+        status: 'error',
+        message: '创建设计围岩等级异常',
+        error: error.message
+      });
+      Message.error('创建设计围岩等级异常');
+    } finally {
+      setTestLoading(key, false);
+    }
+  };
+
+  const testGeophysicalMethods = async () => {
+    const key = 'geophysicalMethods';
+    setTestLoading(key, true);
+    try {
+      const data = await apiAdapter.getGeophysicalMethods({ pageNum: 1, pageSize: 5 });
+      
+      addResult({
+        method: 'GET',
+        url: 'apiAdapter.getGeophysicalMethods()',
+        status: 'success',
+        message: `获取物探法记录成功！共 ${data.total} 条记录`,
+        data: data
+      });
+      
+      Message.success(`物探法记录测试成功！共 ${data.total} 条记录`);
+    } catch (error: any) {
+      addResult({
+        method: 'GET',
+        url: 'apiAdapter.getGeophysicalMethods()',
+        status: 'error',
+        message: '获取物探法记录失败',
+        error: error.message
+      });
+      Message.error('物探法记录测试失败');
+    } finally {
+      setTestLoading(key, false);
+    }
+  };
+
+  const testAPIMode = async () => {
+    const key = 'apiMode';
+    setTestLoading(key, true);
+    try {
+      const apiType = apiAdapter.getAPIType();
+      
+      addResult({
+        method: 'INFO',
+        url: 'apiAdapter.getAPIType()',
+        status: 'success',
+        message: `当前API模式: ${apiType}`,
+        data: { apiType, useRealAPI: process.env.REACT_APP_USE_REAL_API !== 'false' }
+      });
+      
+      Message.info(`当前API模式: ${apiType}`);
+    } catch (error: any) {
+      addResult({
+        method: 'INFO',
+        url: 'apiAdapter.getAPIType()',
+        status: 'error',
+        message: '获取API模式失败',
+        error: error.message
+      });
+    } finally {
+      setTestLoading(key, false);
+    }
+  };
+
   const clearResults = () => {
     setResults([]);
     Message.info('已清空测试结果');
@@ -522,6 +653,42 @@ const ApiTestPage: React.FC = () => {
             loading={loading.seismic}
           >
             📊 地震波反射
+          </Button>
+        </Space>
+        <Divider />
+        <Title heading={4}>🆕 新增CRUD接口测试</Title>
+        <Space size="large" wrap style={{ marginBottom: '20px' }}>
+          <Button 
+            type="primary" 
+            status="success"
+            onClick={testAPIMode} 
+            loading={loading.apiMode}
+          >
+            🔍 检查API模式
+          </Button>
+          <Button 
+            type="primary" 
+            status="success"
+            onClick={testDesignRockGrades} 
+            loading={loading.rockGrades}
+          >
+            🏔️ 设计围岩等级查询
+          </Button>
+          <Button 
+            type="primary" 
+            status="warning"
+            onClick={testCreateRockGrade} 
+            loading={loading.createRockGrade}
+          >
+            ➕ 创建围岩等级
+          </Button>
+          <Button 
+            type="primary" 
+            status="success"
+            onClick={testGeophysicalMethods} 
+            loading={loading.geophysicalMethods}
+          >
+            🔬 物探法记录查询
           </Button>
         </Space>
         <Divider />

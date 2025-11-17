@@ -32,9 +32,9 @@ module.exports = function(app) {
     createProxyMiddleware({
       target: 'http://121.40.127.120:8080',
       changeOrigin: true,
-      pathRewrite: {
-        '^/api': '/api/v1', // 将 /api 重写为 /api/v1
-      },
+      // 不进行路径重写，直接转发
+      // 前端: /api/auth/login -> 后端: /api/auth/login
+      // 前端: /api/v1/bd/bd-xm -> 后端: /api/v1/bd/bd-xm
       onProxyReq: function(proxyReq, req, res) {
         console.log('[API Proxy]', req.method, req.path, '->', proxyReq.path);
       },
