@@ -8,6 +8,7 @@ import GeoPointSearchIntegrated from '../pages/GeoPoint/GeoPointSearchIntegrated
 import ForecastDesignPage from '../pages/ForecastDesignPage'
 import ForecastRockPage from '../pages/ForecastRockPage'
 import ForecastGeologyPage from '../pages/ForecastGeologyPage'
+import GeologyForecastPage from '../pages/GeologyForecastPage'
 import ForecastComprehensivePage from '../pages/ForecastComprehensivePage'
 import WorkPointDetailPage from '../pages/WorkPointDetailPage'
 import DesignLayout from '../components/DesignLayout'
@@ -90,6 +91,14 @@ const router = createBrowserRouter([
     path: 'forecast/geology',
     element: (
       <ProtectedRoute>
+        <GeologyForecastPage />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: 'forecast/design-geology',
+    element: (
+      <ProtectedRoute>
         <DesignLayout>
           <ForecastGeologyPage />
         </DesignLayout>
@@ -100,7 +109,9 @@ const router = createBrowserRouter([
     path: 'forecast/comprehensive',
     element: (
       <ProtectedRoute>
-        <ForecastComprehensivePage />
+        <DesignLayout>
+          <ForecastComprehensivePage />
+        </DesignLayout>
       </ProtectedRoute>
     )
   },

@@ -3,6 +3,7 @@ import { Button, Card, DatePicker, Form, Grid, Input, InputNumber, Message, Moda
 import { IconDelete, IconEdit, IconLeft } from '@arco-design/web-react/icon'
 import { useNavigate } from 'react-router-dom'
 import apiAdapter from '../services/apiAdapter'
+import OperationButtons from '../components/OperationButtons'
 
 type ForecastMethodOption = {
   label: string
@@ -152,19 +153,36 @@ function ForecastDesignPage() {
     // 下载空白模板文件
     // 如果后端提供了模板文件，直接下载；否则提示用户
     const templateUrl = '/templates/设计预报导入模板.xlsx'
-    
-    // 尝试下载模板
     const link = document.createElement('a')
     link.href = templateUrl
     link.download = '设计预报导入模板.xlsx'
+    link.style.display = 'none'
     document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
     
-    Message.info('正在下载模板文件...')
+    link.onerror = () => {
+      document.body.removeChild(link)
+      // 如果模板文件不存在，创建一个简单的CSV模板
+      const csvContent = 'data:text/csv;charset=utf-8,预报方法,开始里程,结束里程,预报长度,最小埋深,预报设计次数\n方法A,DK713+000,DK713+920,920,10,1'
+      const encodedUri = encodeURI(csvContent)
+      const csvLink = document.createElement('a')
+      csvLink.setAttribute('href', encodedUri)
+      csvLink.setAttribute('download', '设计预报导入模板.csv')
+      csvLink.click()
+    }
+    
+    link.click()
+    try {
+      document.body.removeChild(link)
+    } catch (e) {
+      // 忽略移除错误
+    }
   }
 
-  const openImport = () => {
+  const handleAdd = () => {
+    setAddVisible(true)
+  }
+
+  const handleImport = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
       fileInputRef.current.click()
@@ -315,21 +333,23 @@ function ForecastDesignPage() {
       </Card>
 
       {/* 操作按钮 */}
-      <Card style={{ marginBottom: '16px' }}>
-        <Space>
-          <Button onClick={handleDownloadTemplate}>下载模板</Button>
-          <Button onClick={openImport}>导入</Button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            style={{ display: 'none' }}
-            onChange={handleImportFileChange}
-          />
-          <Button type="primary" onClick={() => setAddVisible(true)}>生成预报</Button>
-          <Button status="danger" disabled={selectedRowKeys.length === 0} onClick={handleBatchDelete}>批量删除</Button>
-        </Space>
-      </Card>
+      <OperationButtons
+        onDownloadTemplate={handleDownloadTemplate}
+        onImport={handleImport}
+        onAdd={handleAdd}
+        onClear={handleBatchDelete}
+        selectedCount={selectedRowKeys.length}
+        clearDisabled={selectedRowKeys.length === 0}
+      />
+      
+      {/* 隐藏的文件上传input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv"
+        style={{ display: 'none' }}
+        onChange={handleImportFileChange}
+      />
 
       {/* 数据表格 */}
       <Card>

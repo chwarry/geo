@@ -76,7 +76,9 @@ export interface DesignForecastUpdateRequest {
 // 设计地质信息请求类型（包装在sjdz对象中）
 export interface DesignGeologyRequest {
   sjdz: {
-    siteId: number;        // 工点ID
+    sjdzPk?: number;       // 主键（更新时需要）
+    sjdzId?: number;       // ID
+    sitePk: number;        // 工点ID（修正字段名）
     method: number;        // 方法代码
     dkname: string;        // 里程冠号
     dkilo: number;         // 起点里程
@@ -84,6 +86,8 @@ export interface DesignGeologyRequest {
     dzxxfj?: number;       // 地质信息附加
     revise?: string;       // 修改原因
     username: string;      // 填写人账号
+    gmtCreate?: string;    // 创建时间
+    gmtModified?: string;  // 修改时间
   };
 }
 
@@ -1447,7 +1451,7 @@ class RealAPIService {
     try {
       const response = await put<BaseResponse>(`/api/v1/sjdz/${id}`, data);
       
-      if (response.resultcode === 200) {
+      if (response.resultcode === 0 || response.resultcode === 200) {
         console.log('✅ [realAPI] updateDesignGeology 成功');
         return { success: true };
       } else {
@@ -1467,7 +1471,7 @@ class RealAPIService {
     try {
       const response = await del<BaseResponse>(`/api/v1/sjdz/${id}`);
       
-      if (response.resultcode === 200) {
+      if (response.resultcode === 0 || response.resultcode === 200) {
         console.log('✅ [realAPI] deleteDesignGeology 成功');
         return { success: true };
       } else {
@@ -1477,6 +1481,63 @@ class RealAPIService {
     } catch (error) {
       console.error('❌ [realAPI] deleteDesignGeology 异常:', error);
       return { success: false };
+    }
+  }
+
+  /**
+   * 批量删除设计地质信息
+   */
+  async batchDeleteDesignGeologies(ids: string[]): Promise<{ success: boolean; successCount: number; failCount: number }> {
+    let successCount = 0;
+    let failCount = 0;
+
+    console.log('🗑️ [realAPI] 开始批量删除设计地质信息:', ids);
+
+    for (const id of ids) {
+      try {
+        const result = await this.deleteDesignGeology(id);
+        if (result.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (error) {
+        console.error(`❌ [realAPI] 删除ID ${id} 失败:`, error);
+        failCount++;
+      }
+    }
+
+    const success = failCount === 0;
+    console.log(`✅ [realAPI] 批量删除完成: 成功${successCount}个, 失败${failCount}个`);
+    
+    return { success, successCount, failCount };
+  }
+
+  /**
+   * 下载设计地质模板
+   */
+  async downloadDesignGeologyTemplate(params?: {
+    startdate?: string;
+    enddate?: string;
+    siteID?: number;
+    method?: number;
+  }): Promise<Blob> {
+    try {
+      console.log('📥 [realAPI] 下载设计地质模板:', params);
+      
+      const response = await get<Blob>('/api/v1/platform/download/geology', {
+        params: {
+          userid: this.userId,
+          ...params
+        },
+        responseType: 'blob'
+      });
+      
+      console.log('✅ [realAPI] 下载设计地质模板成功');
+      return response;
+    } catch (error) {
+      console.error('❌ [realAPI] 下载设计地质模板失败:', error);
+      throw error;
     }
   }
 
@@ -1973,6 +2034,8 @@ class RealAPIService {
    */
   async getGeophysicalList(params: { pageNum: number; pageSize: number; siteId?: string }): Promise<PageResponse<any>> {
     try {
+      console.log('🚀 [realAPI] getGeophysicalList 调用参数:', params);
+      
       const response = await get<any>('/api/v1/wtf/list', {
         params: {
           'queryDTO.pageNum': params.pageNum,
@@ -1984,6 +2047,12 @@ class RealAPIService {
       });
       
       console.log('🔍 [realAPI] getGeophysicalList 响应:', response);
+      console.log('📊 [realAPI] 响应数据详情:', {
+        resultcode: response.resultcode,
+        hasData: !!response.data,
+        dataType: typeof response.data,
+        records: response.data?.records?.length || 0
+      });
       
       if (response.resultcode === 200 && response.data) {
         const pageData = response.data;
@@ -2112,11 +2181,50 @@ class RealAPIService {
       const response = await get<any>(`/api/v1/dbbc/${ybPk}`);
       
       if (response.resultcode === 200) {
-        return response.data || null;
+        return response.data;
       }
       return null;
     } catch (error) {
-      console.error('❌ [realAPI] getSurfaceSupplementInfo 异常:', error);
+      console.error(' [realAPI] getSurfaceSupplementInfo 异常:', error);
+      return null;
+    }
+  }
+
+  // ========== 补充的API方法 ==========
+
+  /**
+   * 上传物探法数据
+   */
+  async uploadGeophysicalData(id: string): Promise<{ success: boolean }> {
+    try {
+      const response = await post<BaseResponse>(`/api/v1/wtf/${id}/upload`, {});
+      
+      if (response.resultcode === 200) {
+        console.log('✅ [realAPI] uploadGeophysicalData 成功');
+        return { success: true };
+      } else {
+        console.error('❌ [realAPI] uploadGeophysicalData 失败:', response.message);
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('❌ [realAPI] uploadGeophysicalData 异常:', error);
+      return { success: false };
+    }
+  }
+
+  /**
+   * 获取洞身素描详情
+   */
+  async getTunnelSketchDetail(dssmPk: number): Promise<any> {
+    try {
+      const response = await get<any>(`/api/v1/dssm/${dssmPk}`);
+      
+      if (response.resultcode === 200) {
+        return response.data;
+      }
+      return null;
+    } catch (error) {
+      console.error('❌ [realAPI] getTunnelSketchDetail 异常:', error);
       return null;
     }
   }

@@ -17,18 +17,29 @@ interface WorkPointItem {
 }
 
 // Tab视图类型
-type ViewName = 'design' | 'geology' | 'comprehensive';
+type ViewName = 'designForecast' | 'designRock' | 'designGeology';
 
 // 表格数据行类型
 interface TableDataRow {
   id: string;
   createdAt: string;
-  method: string;
+  method?: string; // Optional for designGeology
   startMileage: string;
-  endMileage: string;
+  endMileage?: string; // Optional for designGeology
   length: number;
-  minBurialDepth: number;
-  designTimes: number;
+  minBurialDepth?: number;
+  designTimes?: number;
+  // New fields for Design Geology (按照第二张图片的列结构)
+  geologyType?: string; // 地质类型
+  geologyInfluence?: string; // 地应力影响度
+  revise?: string; // 修改原因
+  status?: string; // 状态代码
+  statusText?: string; // 状态文本
+  // New fields for Design Rock
+  rockGrade?: string; // 围岩等级
+  dkilo?: number; // 里程公里数
+  wydj?: number; // 围岩等级数字
+  username?: string; // 填写人账号
 }
 
 const GeoPointSearchIntegrated: React.FC = () => {
@@ -65,7 +76,7 @@ const GeoPointSearchIntegrated: React.FC = () => {
 
   // 获取工点的选中Tab
   const getSelectedView = (workPointId: string): ViewName => {
-    return selectedViewMap[workPointId] || 'design';
+    return selectedViewMap[workPointId] || 'designForecast';
   };
 
   // 设置工点的选中Tab
@@ -101,12 +112,18 @@ const GeoPointSearchIntegrated: React.FC = () => {
       let result: { list: any[]; total: number };
       
       // 根据Tab类型调用不同的API
-      if (view === 'design') {
+      if (view === 'designForecast') {
         result = await apiAdapter.getWorkPointDesignInfo(workPointId, { page, pageSize });
-      } else if (view === 'geology') {
+      } else if (view === 'designRock') {
+        result = await apiAdapter.getWorkPointDesignRock(workPointId, { page, pageSize });
+      } else if (view === 'designGeology') {
+        result = await apiAdapter.getWorkPointDesignGeology(workPointId, { 
+          page, 
+          pageSize, 
+          statusFilter: 'all' // 工点搜索显示所有状态的数据
+        });
+      } else { // Fallback, e.g., for old 'geology' tab, now 'designForecast' for data consistency
         result = await apiAdapter.getWorkPointGeologyForecast(workPointId, { page, pageSize });
-      } else {
-        result = await apiAdapter.getWorkPointComprehensiveAnalysis(workPointId, { page, pageSize });
       }
       
       setTableDataMap(prev => ({ ...prev, [workPointId]: result.list }));
@@ -147,27 +164,137 @@ const GeoPointSearchIntegrated: React.FC = () => {
   };
 
   // 表格列定义
-  const getTableColumns = () => {
-    return [
-      { title: '创建时间', dataIndex: 'createdAt', width: 160 },
-      { title: '预报方法', dataIndex: 'method', width: 120 },
-      {
-        title: '开始 - 结束里程',
-        render: (_: any, record: TableDataRow) => `${record.startMileage} - ${record.endMileage}`,
-        width: 220,
-      },
-      { title: '预报长度(m)', dataIndex: 'length', width: 120 },
-      { title: '最小埋深(m)', dataIndex: 'minBurialDepth', width: 120 },
-      { title: '预报设计次数', dataIndex: 'designTimes', width: 140 },
-    ];
+  const getTableColumns = (workPointId: string, view: ViewName) => {
+    // 使用 any[] 避免与 Table 内部列类型约束冲突，专注在渲染结构
+    const baseColumns: any[] = [];
+
+    if (view === 'designForecast') { // 设计预报Tab的列 (Original '设计信息' with new name)
+      baseColumns.push(
+        { title: '创建时间', dataIndex: 'createdAt', width: 160 },
+        { title: '预报方法', dataIndex: 'method', width: 120 },
+        {
+          title: '开始 - 结束里程',
+          render: (_: any, record: TableDataRow) => `${record.startMileage} - ${record.endMileage}`,
+          width: 220,
+        },
+        { title: '预报长度(m)', dataIndex: 'length', width: 120 },
+        { title: '最小埋深(m)', dataIndex: 'minBurialDepth', width: 120 },
+        { title: '预报设计次数', dataIndex: 'designTimes', width: 140 },
+        {
+          title: '操作',
+          render: () => (
+            <Space>
+              <Button type="text" icon={<></>}>
+                <img src="/path/to/edit-icon.svg" alt="编辑" style={{ width: 20, height: 20 }} />
+              </Button>
+            </Space>
+          ),
+          width: 100,
+        }
+      );
+    } else if (view === 'designRock') { // 设计围岩Tab的列
+      baseColumns.push(
+        { title: '创建时间', dataIndex: 'createdAt', width: 160 },
+        {
+          title: '里程',
+          render: (_: any, record: TableDataRow) => `${record.dkilo}`,
+          width: 120,
+        },
+        { title: '围岩等级', dataIndex: 'rockGrade', width: 120 }, // Assuming rockGrade for display
+        { title: '长度', dataIndex: 'length', width: 80 },
+        { title: '修改原因', dataIndex: 'revise', width: 150 },
+        { title: '填写人', dataIndex: 'username', width: 100 },
+        {
+          title: '操作',
+          render: () => (
+            <Space>
+              <Button type="text" icon={<></>}>
+                <img src="/path/to/edit-icon.svg" alt="编辑" style={{ width: 20, height: 20 }} />
+              </Button>
+              <Button type="text" icon={<></>}>
+                <img src="/path/to/delete-icon.svg" alt="删除" style={{ width: 20, height: 20 }} />
+              </Button>
+            </Space>
+          ),
+          width: 100,
+        }
+      );
+    } else if (view === 'designGeology') { // 设计地质Tab的列 (按照第二张图片重新设计)
+      baseColumns.push(
+        { title: '地质类型', dataIndex: 'geologyType', width: 120 },
+        { title: '创建时间', dataIndex: 'createdAt', width: 160 },
+        { title: '地应力影响度', dataIndex: 'geologyInfluence', width: 120 },
+        {
+          title: '开始-结束里程',
+          render: (_: any, record: TableDataRow) => `${record.startMileage} - ${record.endMileage}`,
+          width: 220,
+        },
+        { title: '预报长度', dataIndex: 'length', width: 120 },
+        { 
+          title: '状态', 
+          render: (_: any, record: TableDataRow) => (
+            <span style={{ 
+              color: record.status === 'editing' ? '#ff7d00' : '#00b42a',
+              fontWeight: 500 
+            }}>
+              {record.statusText || '未知'}
+            </span>
+          ), 
+          width: 100 
+        },
+        {
+          title: '操作',
+          render: (_: any, record: TableDataRow) => (
+            <Space>
+              <Button type="text" size="small" style={{ color: '#165DFF' }}>
+                详情
+              </Button>
+              <Button type="text" size="small" style={{ color: '#165DFF' }}>
+                修改
+              </Button>
+            </Space>
+          ),
+          width: 120,
+        }
+      );
+    } else { // Keep original geology forecast for now, assuming user meant different thing.
+      baseColumns.push(
+        { title: '预报方法', dataIndex: 'method', width: 120 },
+        { title: '预报时间', dataIndex: 'createdAt', width: 160 },
+        {
+          title: '掌子面前缘',
+          dataIndex: 'startMileage', // 假设掌子面前缘对应startMileage
+          width: 150,
+        },
+        { title: '长度', dataIndex: 'length', width: 80 },
+        {
+          title: '状态',
+          render: () => '已上传', // 暂时硬编码为“已上传”
+          width: 100,
+        },
+        {
+          title: '操作',
+          render: () => (
+            <Space>
+              <Button type="text" icon={<></>}>
+                <img src="/path/to/edit-icon.svg" alt="编辑" style={{ width: 20, height: 20 }} />
+              </Button>
+            </Space>
+          ),
+          width: 100,
+        }
+      );
+    }
+    return baseColumns;
   };
 
   // 获取Tab标签文本
   const getTabLabel = (view: ViewName) => {
     switch (view) {
-      case 'design': return '设计信息';
-      case 'geology': return '地质预报';
-      case 'comprehensive': return '综合结论';
+      case 'designForecast': return '设计预报';
+      case 'designRock': return '设计围岩';
+      case 'designGeology': return '设计地质';
+      default: return '';
     }
   };
 
@@ -243,22 +370,22 @@ const GeoPointSearchIntegrated: React.FC = () => {
               <div style={{ marginBottom: 24 }}>
                 <Space>
                   <Button 
-                    type={getSelectedView(workPoint.id) === 'design' ? 'primary' : 'outline'}
-                    onClick={() => setSelectedViewFor(workPoint.id, 'design')}
+                    type={getSelectedView(workPoint.id) === 'designForecast' ? 'primary' : 'outline'}
+                    onClick={() => setSelectedViewFor(workPoint.id, 'designForecast')}
                   >
-                    设计信息
+                    设计预报
                   </Button>
                   <Button 
-                    type={getSelectedView(workPoint.id) === 'geology' ? 'primary' : 'outline'}
-                    onClick={() => setSelectedViewFor(workPoint.id, 'geology')}
+                    type={getSelectedView(workPoint.id) === 'designRock' ? 'primary' : 'outline'}
+                    onClick={() => setSelectedViewFor(workPoint.id, 'designRock')}
                   >
-                    地质预报
+                    设计围岩
                   </Button>
                   <Button 
-                    type={getSelectedView(workPoint.id) === 'comprehensive' ? 'primary' : 'outline'}
-                    onClick={() => setSelectedViewFor(workPoint.id, 'comprehensive')}
+                    type={getSelectedView(workPoint.id) === 'designGeology' ? 'primary' : 'outline'}
+                    onClick={() => setSelectedViewFor(workPoint.id, 'designGeology')}
                   >
-                    综合结论
+                    设计地质
                   </Button>
                 </Space>
               </div>
@@ -288,7 +415,7 @@ const GeoPointSearchIntegrated: React.FC = () => {
                 <Spin loading={loadingTable[workPoint.id] || false}>
                   <Table
                     rowKey="id"
-                    columns={getTableColumns()}
+                    columns={getTableColumns(workPoint.id, getSelectedView(workPoint.id))}
                     data={tableDataMap[workPoint.id] || []}
                     pagination={{
                       current: getTablePagination(workPoint.id).page,

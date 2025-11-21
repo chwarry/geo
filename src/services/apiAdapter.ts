@@ -133,6 +133,136 @@ class APIAdapter {
   }
 
   /**
+   * 获取工点的设计围岩信息（GeoPointSearchIntegrated 中“设计围岩”Tab 使用）
+   * 这里复用设计围岩等级列表接口，并适配为 { list, total } 结构
+   */
+  async getWorkPointDesignRock(
+    workPointId: string,
+    params?: { page?: number; pageSize?: number }
+  ): Promise<{ list: any[]; total: number }> {
+    const pageNum = params?.page;
+    const pageSize = params?.pageSize;
+
+    // 目前后端按 sitePk（工点ID）分页，这里简单将 workPointId 透传/忽略，主要为了前端展示
+    const result: any = await this.getDesignRockGrades({
+      pageNum,
+      pageSize,
+      // TODO: 如果后端需要按 sitePk 过滤，可在这里把 workPointId 转成数字传递
+    });
+
+    const records = result.records || [];
+    const list = records.map((item: any, index: number) => ({
+      id: String(item.sjwydjPk ?? item.sjwydjId ?? index),
+      createdAt: item.gmtCreate || '',
+      dkilo: item.dkilo,
+      rockGrade: typeof item.wydj === 'number' ? `Ⅲ-${item.wydj}` : item.wydj, // 简单转成字符串展示
+      length: item.sjwydjLength,
+      revise: item.revise,
+      username: item.username,
+    }));
+
+    return {
+      list,
+      total: typeof result.total === 'number' ? result.total : records.length,
+    };
+  }
+
+  /**
+   * 获取工点的设计地质信息（GeoPointSearchIntegrated 中“设计地质”Tab 使用）
+   * 使用真实的设计地质列表接口 /api/v1/sjdz/list
+   */
+  async getWorkPointDesignGeology(
+    workPointId: string,
+    params?: { page?: number; pageSize?: number; statusFilter?: 'all' | 'editing' | 'uploaded' }
+  ): Promise<{ list: any[]; total: number }> {
+    const pageNum = params?.page;
+    const pageSize = params?.pageSize;
+    const statusFilter = params?.statusFilter || 'all'; // 默认显示所有状态
+
+    // 使用真实的设计地质接口
+    const result: any = await this.getDesignGeologies({
+      pageNum,
+      pageSize,
+      // 如果需要按工点过滤，可以传入 sitePk
+      // sitePk: parseInt(workPointId) // 如果 workPointId 是数字字符串
+    });
+
+    const records = result.records || [];
+    let list = records.map((item: any, index: number) => {
+      // 根据第二张图片的列结构映射数据
+      const dkilo = item.dkilo;
+      const startMileage = item.dkname && dkilo ? `${item.dkname}${dkilo.toFixed(3)}` : '';
+      const endMileage = item.sjdzLength ? 
+        `${item.dkname}${(dkilo + item.sjdzLength/1000).toFixed(3)}` : '';
+      
+      // 模拟状态：根据创建时间或其他条件判断状态
+      // 这里简单模拟：奇数ID为"编辑中"，偶数ID为"已上传"
+      const itemId = item.sjdzPk ?? item.sjdzId ?? index;
+      const status = itemId % 2 === 1 ? 'editing' : 'uploaded';
+      const statusText = status === 'editing' ? '编辑中' : '已上传';
+      
+      return {
+        id: String(itemId),
+        createdAt: item.gmtCreate || '',
+        geologyType: this.getGeologyMethodName(item.method), // 地质类型
+        geologyInfluence: item.dzxxfj ? this.getGeologyInfluenceName(item.dzxxfj) : '一般', // 地应力影响度
+        startMileage,  // 开始里程
+        endMileage,    // 结束里程  
+        length: item.sjdzLength, // 预报长度
+        revise: item.revise || '', // 修改原因
+        username: item.username || '', // 填写人
+        status: status, // 状态代码
+        statusText: statusText, // 状态文本
+      };
+    });
+
+    // 根据状态过滤数据
+    if (statusFilter === 'editing') {
+      list = list.filter((item: any) => item.status === 'editing');
+    } else if (statusFilter === 'uploaded') {
+      list = list.filter((item: any) => item.status === 'uploaded');
+    }
+    // statusFilter === 'all' 时不过滤
+
+    return {
+      list,
+      total: list.length, // 过滤后的总数
+    };
+  }
+
+  /**
+   * 根据方法代码获取地质类型名称
+   */
+  private getGeologyMethodName(method: number): string {
+    const methodMap: Record<number, string> = {
+      1: '地质雷达',
+      2: '红外探测', 
+      3: '陆地声呐',
+      4: '电磁波反射',
+      5: '高分辨直流电',
+      6: '瞬变电磁',
+      7: '微震监测',
+      8: '地质调查',
+      9: '钻探取芯'
+    };
+    return methodMap[method] || `方法${method}`;
+  }
+
+  /**
+   * 根据地质信息附加代码获取影响度名称
+   */
+  private getGeologyInfluenceName(dzxxfj: number): string {
+    const influenceMap: Record<number, string> = {
+      1: '轻微',
+      2: '一般', 
+      3: '较复杂',
+      4: '复杂',
+      5: '极复杂'
+    };
+    return influenceMap[dzxxfj] || '一般';
+  }
+
+  /**
    * 获取工点的地质预报（地质预报Tab数据）
    */
   async getWorkPointGeologyForecast(workPointId: string, params?: { page?: number; pageSize?: number }) {
@@ -336,6 +466,37 @@ class APIAdapter {
     } else {
       console.log('🎭 [apiAdapter] Mock deleteDesignGeology:', id);
       return { success: true };
+    }
+  }
+
+  /**
+   * 批量删除设计地质信息
+   */
+  async batchDeleteDesignGeologies(ids: string[]): Promise<{ success: boolean; successCount: number; failCount: number }> {
+    if (USE_REAL_API) {
+      return realAPI.batchDeleteDesignGeologies(ids);
+    } else {
+      console.log('🎭 [apiAdapter] Mock batchDeleteDesignGeologies:', ids);
+      return { success: true, successCount: ids.length, failCount: 0 };
+    }
+  }
+
+  /**
+   * 下载设计地质模板
+   */
+  async downloadDesignGeologyTemplate(params?: {
+    startdate?: string;
+    enddate?: string;
+    siteID?: number;
+    method?: number;
+  }): Promise<Blob> {
+    if (USE_REAL_API) {
+      return realAPI.downloadDesignGeologyTemplate(params);
+    } else {
+      console.log('🎭 [apiAdapter] Mock downloadDesignGeologyTemplate:', params);
+      // 创建一个模拟的Excel文件
+      const csvContent = 'ID,地质类型,创建时间,地应力影响度,开始里程,结束里程,预报长度\n1,地质雷达,2024-01-01,一般,DK713+000,DK713+100,100';
+      return new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
     }
   }
 
@@ -608,76 +769,85 @@ class APIAdapter {
   // 获取物探法列表
   async getGeophysicalList(params: { pageNum: number; pageSize: number; siteId?: string }) {
     if (USE_REAL_API) {
-      return realAPI.getGeophysicalList(params);
+      const result = await realAPI.getGeophysicalList(params);
+      console.log('🔍 [apiAdapter] getGeophysicalList 真实API结果:', result);
+      return result;
     } else {
-      // Mock数据
-      const mockData = [
-        {
-          wtfPk: 1,
-          wtfId: 'wtf_001',
-          sitePk: 1,
-          ybPk: 1,
-          method: 1,
-          methodName: '地质雷达',
-          dkname: 'DK',
-          dkilo: 713.920,
-          wtfLength: 150,
-          monitordate: '2024-01-15',
-          originalfile: '地质雷达_001.dat',
-          addition: '地质雷达探测记录，发现异常区域',
-          images: '地质雷达_001.jpg',
-          gmtCreate: '2024-01-15T10:30:00',
-          gmtModified: '2024-01-15T10:30:00'
-        },
-        {
-          wtfPk: 2,
-          wtfId: 'wtf_002',
-          sitePk: 1,
-          ybPk: 2,
-          method: 2,
-          methodName: '红外探测',
-          dkname: 'DK',
-          dkilo: 714.100,
-          wtfLength: 120,
-          monitordate: '2024-01-20',
-          originalfile: '红外探测_002.dat',
-          addition: '红外探测正常',
-          images: '红外探测_002.jpg',
-          gmtCreate: '2024-01-20T14:20:00',
-          gmtModified: '2024-01-20T14:20:00'
-        },
-        {
-          wtfPk: 3,
-          wtfId: 'wtf_003',
-          sitePk: 1,
-          ybPk: 3,
-          method: 3,
-          methodName: '陆地声呐',
-          dkname: 'DK',
-          dkilo: 714.500,
-          wtfLength: 180,
-          monitordate: '2024-02-01',
-          originalfile: '陆地声呐_003.dat',
-          addition: '陆地声呐探测，发现溶洞',
-          images: '陆地声呐_003.jpg',
-          gmtCreate: '2024-02-01T09:15:00',
-          gmtModified: '2024-02-01T09:15:00'
-        }
-      ];
-      return { 
-        records: mockData, 
-        total: mockData.length, 
-        current: 1, 
-        size: 10, 
-        pages: 1 
-      };
+      return this.getMockGeophysicalData();
     }
+  }
+
+  // Mock数据方法
+  private getMockGeophysicalData() {
+    const mockData = [
+      {
+        wtfPk: 1,
+        wtfId: 'wtf_001',
+        sitePk: 1,
+        ybPk: 1,
+        method: 1,
+        methodName: '地质雷达',
+        dkname: 'DK',
+        dkilo: 713.920,
+        wtfLength: 150,
+        monitordate: '2024-01-15',
+        originalfile: '地质雷达_001.dat',
+        addition: '地质雷达探测记录，发现异常区域',
+        images: '地质雷达_001.jpg',
+        gmtCreate: '2024-01-15T10:30:00',
+        gmtModified: '2024-01-15T10:30:00'
+      },
+      {
+        wtfPk: 2,
+        wtfId: 'wtf_002',
+        sitePk: 1,
+        ybPk: 2,
+        method: 2,
+        methodName: '红外探测',
+        dkname: 'DK',
+        dkilo: 714.100,
+        wtfLength: 200,
+        monitordate: '2024-01-20',
+        originalfile: '红外探测_002.dat',
+        addition: '红外探测正常',
+        images: '红外探测_002.jpg',
+        gmtCreate: '2024-01-20T14:20:00',
+        gmtModified: '2024-01-20T14:20:00'
+      },
+      {
+        wtfPk: 3,
+        wtfId: 'wtf_003',
+        sitePk: 1,
+        ybPk: 3,
+        method: 3,
+        methodName: '陆地声呐',
+        dkname: 'DK',
+        dkilo: 714.500,
+        wtfLength: 180,
+        monitordate: '2024-02-01',
+        originalfile: '陆地声呐_003.dat',
+        addition: '陆地声呐探测，发现溶洞',
+        images: '陆地声呐_003.jpg',
+        gmtCreate: '2024-02-01T09:15:00',
+        gmtModified: '2024-02-01T09:15:00'
+      }
+    ];
+
+    return {
+      records: mockData,
+      total: mockData.length,
+      current: 1,
+      size: 10,
+      pages: Math.ceil(mockData.length / 10)
+    };
   }
 
   // 获取掌子面素描列表
   async getPalmSketchList(params: { pageNum: number; pageSize: number; siteId?: string }) {
     if (USE_REAL_API) {
-      return realAPI.getPalmSketchList(params);
+      const result = await realAPI.getPalmSketchList(params);
+      console.log('🔍 [apiAdapter] getPalmSketchList 真实API结果:', result);
+      return result;
     } else {
       const mockData = [
         {
@@ -724,7 +894,9 @@ class APIAdapter {
   // 获取洞身素描列表
   async getTunnelSketchList(params: { pageNum: number; pageSize: number; siteId?: string }) {
     if (USE_REAL_API) {
-      return realAPI.getTunnelSketchList(params);
+      const result = await realAPI.getTunnelSketchList(params);
+      console.log('🔍 [apiAdapter] getTunnelSketchList 真实API结果:', result);
+      return result;
     } else {
       const mockData = [
         {
@@ -771,7 +943,9 @@ class APIAdapter {
   // 获取钻探法列表
   async getDrillingList(params: { pageNum: number; pageSize: number; siteId?: string }) {
     if (USE_REAL_API) {
-      return realAPI.getDrillingList(params);
+      const result = await realAPI.getDrillingList(params);
+      console.log('🔍 [apiAdapter] getDrillingList 真实API结果:', result);
+      return result;
     } else {
       const mockData = [
         {
@@ -820,9 +994,140 @@ class APIAdapter {
   // 获取地表补充信息
   async getSurfaceSupplementInfo(ybPk: string) {
     if (USE_REAL_API) {
-      return realAPI.getSurfaceSupplementInfo(ybPk);
+      const result = await realAPI.getSurfaceSupplementInfo(ybPk);
+      console.log('🔍 [apiAdapter] getSurfaceSupplementInfo 真实API结果:', result);
+      return result;
     } else {
       return null;
+    }
+  }
+
+  // ========== 五种方法的CRUD操作 ==========
+
+  // 物探法操作
+  async getGeophysicalDetail(id: string) {
+    if (USE_REAL_API) {
+      return realAPI.getGeophysicalMethodDetail(parseInt(id));
+    } else {
+      return { id, method: '地质雷达', details: 'Mock详情数据' };
+    }
+  }
+
+  async updateGeophysical(id: string, data: any) {
+    if (USE_REAL_API) {
+      return realAPI.updateGeophysicalMethod(id, data);
+    } else {
+      return { success: true };
+    }
+  }
+
+  async deleteGeophysical(id: string) {
+    if (USE_REAL_API) {
+      return realAPI.deleteGeophysicalMethod(id);
+    } else {
+      return { success: true };
+    }
+  }
+
+  async copyGeophysical(id: string) {
+    if (USE_REAL_API) {
+      // 先获取详情，然后创建新记录
+      const detail = await this.getGeophysicalDetail(id);
+      if (detail) {
+        // 移除ID相关字段，创建副本
+        const copyData = { ...detail };
+        delete copyData.wtfPk;
+        delete copyData.wtfId;
+        return realAPI.createGeophysicalMethod(copyData);
+      }
+      return { success: false };
+    } else {
+      return { success: true };
+    }
+  }
+
+  async uploadGeophysical(id: string) {
+    if (USE_REAL_API) {
+      // 调用上传API，具体实现根据后端接口
+      return realAPI.uploadGeophysicalData(id);
+    } else {
+      return { success: true };
+    }
+  }
+
+  // 掌子面素描操作
+  async getPalmSketchDetail(id: string) {
+    if (USE_REAL_API) {
+      return realAPI.getFaceSketchDetail(parseInt(id));
+    } else {
+      return { id, method: '掌子面素描', details: 'Mock详情数据' };
+    }
+  }
+
+  async updatePalmSketch(id: string, data: any) {
+    if (USE_REAL_API) {
+      return realAPI.updateFaceSketch(id, data);
+    } else {
+      return { success: true };
+    }
+  }
+
+  async deletePalmSketch(id: string) {
+    if (USE_REAL_API) {
+      return realAPI.deleteFaceSketch(id);
+    } else {
+      return { success: true };
+    }
+  }
+
+  // 洞身素描操作
+  async getTunnelSketchDetail(id: string) {
+    if (USE_REAL_API) {
+      // 使用已存在的方法名
+      return realAPI.getTunnelSketchDetail(parseInt(id));
+    } else {
+      return { id, method: '洞身素描', details: 'Mock详情数据' };
+    }
+  }
+
+  async updateTunnelSketch(id: string, data: any) {
+    if (USE_REAL_API) {
+      return realAPI.updateTunnelSketch(id, data);
+    } else {
+      return { success: true };
+    }
+  }
+
+  async deleteTunnelSketch(id: string) {
+    if (USE_REAL_API) {
+      return realAPI.deleteTunnelSketch(id);
+    } else {
+      return { success: true };
+    }
+  }
+
+  // 钻探法操作
+  async getDrillingDetail(id: string) {
+    if (USE_REAL_API) {
+      return realAPI.getDrillingMethodDetail(parseInt(id));
+    } else {
+      return { id, method: '钻探法', details: 'Mock详情数据' };
+    }
+  }
+
+  async updateDrilling(id: string, data: any) {
+    if (USE_REAL_API) {
+      return realAPI.updateDrillingMethod(id, data);
+    } else {
+      return { success: true };
+    }
+  }
+
+  async deleteDrilling(id: string) {
+    if (USE_REAL_API) {
+      return realAPI.deleteDrillingMethod(id);
+    } else {
+      return { success: true };
     }
   }
 }

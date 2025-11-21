@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Button, Card, DatePicker, Form, Grid, Input, InputNumber, Message, Modal, Select, Space, Table } from '@arco-design/web-react'
-import { IconEdit, IconDelete, IconDownload, IconImport, IconExport, IconLeft } from '@arco-design/web-react/icon'
+import { IconEdit, IconDelete, IconLeft } from '@arco-design/web-react/icon'
 import { useNavigate } from 'react-router-dom'
 import apiAdapter from '../services/apiAdapter'
 import { DesignRockGrade } from '../services/realAPI'
+import OperationButtons from '../components/OperationButtons'
 
 // 页面使用的记录类型（转换后的格式）
 type RockGradeRecord = {
@@ -159,6 +160,11 @@ function ForecastRockPage() {
         }
       },
     })
+  }
+
+  const handleAdd = () => {
+    addForm.resetFields()
+    setAddVisible(true)
   }
 
   const handleAddSubmit = async () => {
@@ -452,22 +458,14 @@ function ForecastRockPage() {
       </Card>
 
       {/* 操作按钮区 */}
-      <Card style={{ marginBottom: '16px' }}>
-        <Space>
-          <Button icon={<IconDownload />} onClick={handleDownloadTemplate}>
-            下载模板
-          </Button>
-          <Button icon={<IconImport />} onClick={handleImport}>
-            导入
-          </Button>
-          <Button icon={<IconExport />} onClick={handleExport}>
-            导出
-          </Button>
-          <Button status="danger" onClick={handleClearAll}>
-            清空操作
-          </Button>
-        </Space>
-      </Card>
+      <OperationButtons
+        onDownloadTemplate={handleDownloadTemplate}
+        onImport={handleImport}
+        onAdd={handleAdd}
+        onClear={handleClearAll}
+        selectedCount={selectedRowKeys.length}
+        clearDisabled={selectedRowKeys.length === 0}
+      />
 
       {/* 数据表格 */}
       <Card>
