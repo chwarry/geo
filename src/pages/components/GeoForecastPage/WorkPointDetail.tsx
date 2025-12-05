@@ -159,10 +159,10 @@ const WorkPointDetail: React.FC<WorkPointDetailProps> = ({
           >
             地质预报
           </Button>
-          <Button 
+          <Button
             type="primary"
             size="large"
-            onClick={() => onNavigate('/forecast/comprehensive')}
+            onClick={() => onNavigate(`/forecast/comprehensive?siteId=${workPointId}`)}
           >
             综合结论
           </Button>
