@@ -4,19 +4,19 @@ import { Layout, Card, Message } from '@arco-design/web-react';
 import { Tunnel, WorkPoint, Project } from '../services/geoForecastAPI';
 // import apiAdapter from '../services/apiAdapter';
 import apiAdapter from '../services/realAPI';
-import './HelloPage.css';
+import './GeoForecastPage.css';
 
 // Components
-import HelloHeader from './components/HelloPage/HelloHeader';
-import TunnelSider from './components/HelloPage/TunnelSider';
-import StatisticsCards from './components/HelloPage/StatisticsCards';
-import ProjectInfoBar from './components/HelloPage/ProjectInfoBar';
-import WorkPointFilter from './components/HelloPage/WorkPointFilter';
-import WorkPointList from './components/HelloPage/WorkPointList';
+import HelloHeader from './components/GeoForecastPage/HelloHeader';
+import TunnelSider from './components/GeoForecastPage/TunnelSider';
+import StatisticsCards from './components/GeoForecastPage/StatisticsCards';
+import ProjectInfoBar from './components/GeoForecastPage/ProjectInfoBar';
+import WorkPointFilter from './components/GeoForecastPage/WorkPointFilter';
+import WorkPointList from './components/GeoForecastPage/WorkPointList';
 
 const { Content } = Layout;
 
-function HelloPage() {
+function GeoForecastPage() {
   const navigate = useNavigate();
   
   // 状态管理
@@ -330,4 +330,4 @@ function HelloPage() {
   );
 }
 
-export default HelloPage;
+export default GeoForecastPage;

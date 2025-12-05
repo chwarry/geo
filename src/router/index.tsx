@@ -1,7 +1,7 @@
 import React from 'react'
 import {createBrowserRouter, Link} from 'react-router-dom'
 import HomePage from '../pages/HomePage'
-import HelloPage from '../pages/HelloPage'
+import GeoForecastPage from '../pages/GeoForecastPage'
 import LoginPage from '../pages/LoginPage'
 import GeoPointSearch from '../pages/GeoPoint/GeoPointSearch'
 import GeoPointSearchIntegrated from '../pages/GeoPoint/GeoPointSearchIntegrated'
@@ -45,10 +45,10 @@ const router = createBrowserRouter([
     )
   },
   {
-    path: '/hello',
+    path: '/geo-forecast',
     element: (
       <ProtectedRoute>
-        <HelloPage />
+        <GeoForecastPage />
       </ProtectedRoute>
     )
   },
