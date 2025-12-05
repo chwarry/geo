@@ -1102,25 +1102,51 @@ class RealAPIService {
    * 获取项目信息
    */
   async getProjectInfo(): Promise<Project> {
-    // 从标段数据中提取项目信息
-    const bidData = await this.getBidSectionList();
-    if (bidData && bidData.bdVOList && bidData.bdVOList.length > 0) {
-      const firstBd = bidData.bdVOList[0].bd;
+    try {
+      // 从标段数据中提取项目信息
+      const bidData = await this.getBidSectionList();
+      
+      let projectId = 'project-001';
+      let projectName = '渝昆高铁引入昆明枢纽组织工程'; // 默认值作为后备
+      let constructionUnit = '中国铁路昆明局集团有限公司'; // 默认值作为后备
+      let description = '';
+
+      if (bidData && bidData.bdVOList && bidData.bdVOList.length > 0) {
+        const firstBd = bidData.bdVOList[0].bd;
+        projectId = firstBd.xmId || projectId;
+        projectName = firstBd.xmname || projectName;
+        description = `标段总数: ${bidData.bdVOList.length}`;
+        
+        // 尝试获取更多详细信息（如建设单位）
+        try {
+          const bdDetail = await this.getBidSectionAndWorkPoints(String(firstBd.bdPk));
+          // 检查 bdInfoVO 或直接在 response 中查找
+          if (bdDetail?.bdInfoVO?.[0]?.jsdanwei) {
+             constructionUnit = bdDetail.bdInfoVO[0].jsdanwei;
+          } else if (bdDetail?.jsdanwei) {
+             constructionUnit = bdDetail.jsdanwei;
+          }
+        } catch (e) {
+          console.warn('获取标段详情失败，使用默认建设单位', e);
+        }
+      }
+      
       return {
-        id: firstBd.xmId || 'project-001',
-        name: firstBd.xmname || '渝昆高铁引入昆明枢纽组织工程',
-        constructionUnit: firstBd.jsdanwei || '中国铁路昆明局集团有限公司',
-        description: `标段总数: ${bidData.bdVOList.length}`
+        id: projectId,
+        name: projectName,
+        constructionUnit: constructionUnit,
+        description: description || '新建铁路渝昆高铁引入昆明枢纽工程'
+      };
+    } catch (error) {
+      console.error('获取项目信息失败:', error);
+      // 出错时才返回完全的默认值
+      return {
+        id: 'project-001',
+        name: '渝昆高铁引入昆明枢纽组织工程',
+        constructionUnit: '中国铁路昆明局集团有限公司',
+        description: '新建铁路渝昆高铁引入昆明枢纽工程(离线)'
       };
     }
-    
-    // 默认项目信息
-    return {
-      id: 'project-001',
-      name: '渝昆高铁引入昆明枢纽组织工程',
-      constructionUnit: '中国铁路昆明局集团有限公司',
-      description: '新建铁路渝昆高铁引入昆明枢纽工程'
-    };
   }
 
   /**
@@ -1352,24 +1378,122 @@ class RealAPIService {
    * 获取工点探测数据（用于HelloPage等页面）
    */
   async getGeoPointDetectionData(workPointId: string): Promise<GeoPointDetectionData> {
-    // 这里需要根据工点ID查询相关的物探法数据
-    // 暂时返回mock数据结构，后续根据实际需求调用相应的物探法接口
-    const workPoint = await this.getWorkPointById(workPointId);
-    
-    // 可以调用物探法列表接口，筛选该工点的数据
-    // const geophysicalData = await this.getGeophysicalMethodList({ ... });
-    
-    return {
-      workPointId: workPoint.id,
-      workPointName: workPoint.name,
-      mileage: `DK${Math.floor(workPoint.mileage / 1000)}+${workPoint.mileage % 1000}`,
-      length: workPoint.length || 0,
-      detectionMethods: [
-        { name: 'TSP', count: 0, color: '#3B82F6' },
-        { name: 'HSP', count: 0, color: '#8B5CF6' },
-      ],
-      detectionDetails: {}
-    };
+    try {
+      const workPoint = await this.getWorkPointById(workPointId);
+      
+      // 定义所有需要查询的预报方法
+      // 物探法子方法
+      const wtfMethods = [
+        { name: 'TSP', type: 1, method: 1, color: '#3B82F6' },
+        { name: 'HSP', type: 1, method: 2, color: '#8B5CF6' },
+        { name: '陆地声呐', type: 1, method: 3, color: '#10B981' },
+        { name: '电磁波反射', type: 1, method: 4, color: '#F59E0B' },
+        { name: '高分辨直流电', type: 1, method: 5, color: '#EF4444' },
+        { name: '瞬变电磁', type: 1, method: 6, color: '#EC4899' },
+        { name: '微震监测', type: 1, method: 9, color: '#6366F1' },
+      ];
+      
+      // 其他大类方法
+      const otherMethods = [
+        { name: '掌子面素描', type: 2, method: null, color: '#14B8A6' },
+        { name: '洞身素描', type: 3, method: null, color: '#F97316' },
+        { name: '钻探法', type: 4, method: null, color: '#84CC16' },
+        { name: '地表补充', type: 5, method: null, color: '#06B6D4' },
+      ];
+
+      // 并行查询所有方法的数量
+      const wtfPromises = wtfMethods.map(async (m) => {
+        try {
+          const res = await this.getGeophysicalList({ 
+            pageNum: 1, 
+            pageSize: 1, // 只需要total，所以pageSize=1
+            siteId: workPointId
+          });
+          // 注意：getGeophysicalList 内部写死了 type=1，所以我们只需要过滤 method
+          // 但是 API 不支持 method 过滤？
+          // 重新检查 getGeophysicalList 实现，它调用 /api/v1/wtf/list，该接口支持 queryDTO 中的 method
+          // 但是 getGeophysicalList 并没有暴露 method 参数。
+          // 我们需要修改 getGeophysicalList 或者直接调用底层 fetch
+          
+          // 修正：我们需要一个新的通用查询方法或者修改现有方法支持 method
+          // 为了不破坏现有代码，直接在这里调用 API
+          const queryParams: any = {
+            siteId: workPointId,
+            type: 1,
+            // submitFlag: 1,
+            pageNum: 1,
+            pageSize: 1,
+            method: m.method
+          };
+          const response = await get<any>('/api/v1/wtf/list', { params: queryParams });
+          // 处理响应获取 total
+          let total = 0;
+          if (response?.data?.total) total = response.data.total;
+          else if (response?.total) total = response.total;
+          
+          return { ...m, count: total };
+        } catch (e) {
+          console.error(`查询 ${m.name} 失败`, e);
+          return { ...m, count: 0 };
+        }
+      });
+
+      const otherPromises = otherMethods.map(async (m) => {
+        try {
+          let total = 0;
+          if (m.type === 2) {
+             const res = await this.getPalmSketchList({ pageNum: 1, pageSize: 1, siteId: workPointId });
+             total = res.total;
+          } else if (m.type === 3) {
+             const res = await this.getTunnelSketchList({ pageNum: 1, pageSize: 1, siteId: workPointId });
+             total = res.total;
+          } else if (m.type === 4) {
+             const res = await this.getDrillingList({ pageNum: 1, pageSize: 1, siteId: workPointId });
+             total = res.total;
+          } else if (m.type === 5) {
+             const res = await this.getSurfaceSupplementList({ pageNum: 1, pageSize: 1, siteId: workPointId });
+             total = res.total;
+          }
+          return { ...m, count: total };
+        } catch (e) {
+           console.error(`查询 ${m.name} 失败`, e);
+           return { ...m, count: 0 };
+        }
+      });
+
+      const [wtfResults, otherResults] = await Promise.all([
+        Promise.all(wtfPromises),
+        Promise.all(otherPromises)
+      ]);
+
+      const allMethods = [...wtfResults, ...otherResults];
+      // 过滤掉数量为 0 的，或者全部显示
+      const detectionMethods = allMethods.map(m => ({
+        name: m.name,
+        count: m.count,
+        color: m.color
+      }));
+
+      return {
+        workPointId: workPoint.id,
+        workPointName: workPoint.name,
+        mileage: `DK${Math.floor(workPoint.mileage / 1000)}+${workPoint.mileage % 1000}`,
+        length: workPoint.length || 0,
+        detectionMethods,
+        detectionDetails: {} // 详情暂不加载，需要时再请求
+      };
+    } catch (error) {
+      console.error('获取工点探测数据失败:', error);
+      // 出错时返回空数据，而不是假数据
+      return {
+        workPointId: workPointId,
+        workPointName: '加载失败',
+        mileage: '',
+        length: 0,
+        detectionMethods: [],
+        detectionDetails: {}
+      };
+    }
   }
 
   /**
@@ -2677,6 +2801,7 @@ class RealAPIService {
       const queryParams = {
         siteId: params.siteId,  // 必填，不使用默认值
         type: 1,                // 1=物探法
+        // submitFlag: 1,          // 必填，1=已提交
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };
@@ -2725,6 +2850,7 @@ class RealAPIService {
       const queryParams = {
         siteId: params.siteId,
         type: 2,  // 2=掌子面素描
+        // submitFlag: 1, // 必填
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };
@@ -2772,6 +2898,7 @@ class RealAPIService {
       const queryParams = {
         siteId: params.siteId,
         type: 3,  // 3=洞身素描
+        // submitFlag: 1, // 必填
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };
@@ -2819,6 +2946,7 @@ class RealAPIService {
       const queryParams = {
         siteId: params.siteId,
         type: 4,  // 4=钻探法
+        // submitFlag: 1, // 必填
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };
@@ -2866,6 +2994,7 @@ class RealAPIService {
       const queryParams = {
         siteId: params.siteId,
         type: 5,  // 5=地表补充
+        // submitFlag: 1, // 必填
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };

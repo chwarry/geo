@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout, Card, Message } from '@arco-design/web-react';
 import { Tunnel, WorkPoint, Project } from '../services/geoForecastAPI';
-import apiAdapter from '../services/apiAdapter';
+// import apiAdapter from '../services/apiAdapter';
+import apiAdapter from '../services/realAPI';
 import './HelloPage.css';
 
 // Components
@@ -120,14 +121,15 @@ function HelloPage() {
   }, [loadWorkPointDetectionData, loadForecastMethodsData]);
 
   // 计算统计数据
-  const calculateStatistics = useCallback(async () => {
+  const calculateStatistics = useCallback(async (tunnels?: Tunnel[]) => {
     try {
-      // 获取所有隧道数据
-      const tunnels = await apiAdapter.getTunnelList();
+      // 获取所有隧道数据（如果有传入则使用传入的，否则从API获取）
+      // 注意：这里为了避免重复请求，尽量使用已有的 tunnelList
+      const tunnelsData = tunnels || await apiAdapter.getTunnels();
       
       // 获取所有工点数据（遍历所有隧道）
       let allWorkPoints: WorkPoint[] = [];
-      for (const tunnel of tunnels) {
+      for (const tunnel of tunnelsData) {
         try {
           const points = await apiAdapter.getWorkPoints(tunnel.id);
           allWorkPoints = [...allWorkPoints, ...points];
@@ -138,7 +140,7 @@ function HelloPage() {
 
       // 计算统计数据
       const stats = {
-        totalTunnels: tunnels.length,
+        totalTunnels: tunnelsData.length,
         totalWorkPoints: allWorkPoints.length,
         completedWorkPoints: allWorkPoints.filter(wp => wp.status === '已完成').length,
         highRiskPoints: allWorkPoints.filter(wp => wp.riskLevel === '高风险').length
@@ -156,7 +158,7 @@ function HelloPage() {
     setLoadingProject(true);
     try {
       // 假设当前项目ID为 'project-001'
-      const project = await apiAdapter.getProjectInfo('project-001');
+      const project = await apiAdapter.getProjectInfo();
       setProjectInfo(project);
     } catch (error) {
       console.error('获取项目信息失败:', error);
@@ -176,14 +178,12 @@ function HelloPage() {
   const fetchTunnelList = useCallback(async () => {
     setLoadingTunnels(true);
     try {
-      const tunnels = await apiAdapter.getTunnelList('project-001');
+      const tunnels = await apiAdapter.getTunnels();
       setTunnelList(tunnels);
       setFilteredTunnels(tunnels);
       
       // 如果没有选中的隧道，默认选中第一个
-      if (tunnels.length > 0 && !selectedTunnel) {
-        setSelectedTunnel(tunnels[0].id);
-      }
+      // 注意：这里仅设置列表，不处理选中逻辑，避免循环依赖
     } catch (error) {
       console.error('获取隧道列表失败:', error);
       Message.error('获取隧道列表失败');
@@ -198,13 +198,17 @@ function HelloPage() {
       ];
       setTunnelList(defaultTunnels);
       setFilteredTunnels(defaultTunnels);
-      if (!selectedTunnel) {
-        setSelectedTunnel(defaultTunnels[0].id);
-      }
     } finally {
       setLoadingTunnels(false);
     }
-  }, [selectedTunnel]);
+  }, []); // 移除 selectedTunnel 依赖
+
+  // 监听隧道列表变化，设置默认选中
+  useEffect(() => {
+    if (tunnelList.length > 0 && !selectedTunnel) {
+      setSelectedTunnel(tunnelList[0].id);
+    }
+  }, [tunnelList, selectedTunnel]);
 
   // 获取工点列表
   const fetchWorkPoints = useCallback(async (tunnelId: string) => {
@@ -304,8 +308,15 @@ function HelloPage() {
   useEffect(() => {
     fetchProjectInfo();
     fetchTunnelList();
-    calculateStatistics(); // 计算统计数据
-  }, [fetchProjectInfo, fetchTunnelList, calculateStatistics]);
+    // calculateStatistics 会依赖 tunnelList 的变化而执行
+  }, [fetchProjectInfo, fetchTunnelList]); // 移除 calculateStatistics，因为它现在依赖 tunnelList
+
+  // 当隧道列表加载完成后计算统计数据
+  useEffect(() => {
+    if (tunnelList.length > 0) {
+      calculateStatistics(tunnelList);
+    }
+  }, [tunnelList, calculateStatistics]);
 
   // 当选中隧道变化时，获取对应的工点数据
   useEffect(() => {
