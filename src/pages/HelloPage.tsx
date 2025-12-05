@@ -1,34 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Layout, 
-  Menu, 
-  Avatar, 
-  Dropdown, 
-  Input, 
-  Button, 
-  Card,
-  Space,
-  Typography,
-  Spin,
-  Message,
-  Empty,
-  Select,
-  Collapse,
-  Tabs,
-  Table
-} from '@arco-design/web-react';
-import { IconSearch, IconUser, IconDown, IconFile, IconRight } from '@arco-design/web-react/icon';
+import { Layout, Card, Message } from '@arco-design/web-react';
 import { Tunnel, WorkPoint, Project } from '../services/geoForecastAPI';
 import apiAdapter from '../services/apiAdapter';
-import DetectionChart from '../components/DetectionChart';
 import './HelloPage.css';
 
-const { Header, Sider, Content } = Layout;
-const { Search } = Input;
-const { Text } = Typography;
-const CollapseItem = Collapse.Item;
-const TabPane = Tabs.TabPane;
+// Components
+import HelloHeader from './components/HelloPage/HelloHeader';
+import TunnelSider from './components/HelloPage/TunnelSider';
+import StatisticsCards from './components/HelloPage/StatisticsCards';
+import ProjectInfoBar from './components/HelloPage/ProjectInfoBar';
+import WorkPointFilter from './components/HelloPage/WorkPointFilter';
+import WorkPointList from './components/HelloPage/WorkPointList';
+
+const { Content } = Layout;
 
 function HelloPage() {
   const navigate = useNavigate();
@@ -72,12 +57,6 @@ function HelloPage() {
     completedWorkPoints: 0,
     highRiskPoints: 0
   });
-
-  const userMenuItems = [
-    { key: 'profile', label: '个人中心' },
-    { key: 'settings', label: '设置' },
-    { key: 'logout', label: '退出登录' },
-  ];
 
   // 加载工点探测数据
   const loadWorkPointDetectionData = useCallback(async (workPointId: string) => {
@@ -338,178 +317,18 @@ function HelloPage() {
   return (
     <Layout style={{ height: '100vh' }}>
       {/* 顶部导航栏 */}
-      <Header style={{ 
-        backgroundColor: '#fff', 
-        padding: '0 24px',
-        borderBottom: '1px solid #e8e9ea',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
-        height: '64px',
-        flexShrink: 0,
-        position: 'relative'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-          <h3 style={{ margin: 0, color: '#165dff', fontSize: '20px', fontWeight: 600 }}>
-            超前地质预报
-          </h3>
-        </div>
+      <HelloHeader onNavigate={navigate} />
 
-        {/* 中间导航选项卡 */}
-        <div style={{ 
-          position: 'absolute', 
-          left: '50%', 
-          transform: 'translateX(-50%)',
-          zIndex: 10,
-          display: 'flex',
-          gap: '40px',
-          alignItems: 'center',
-          height: '64px'
-        }}>
-          <div 
-            style={{ 
-              fontSize: '16px',
-              color: '#86909c',
-              cursor: 'pointer',
-              padding: '0 8px',
-              height: '64px',
-              display: 'flex',
-              alignItems: 'center',
-              transition: 'color 0.2s'
-            }}
-            onClick={() => navigate('/home')}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#165dff'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#86909c'}
-          >
-            首页
-          </div>
-          <div 
-            style={{ 
-              fontSize: '16px',
-              color: '#165dff',
-              cursor: 'pointer',
-              padding: '0 8px',
-              height: '64px',
-              display: 'flex',
-              alignItems: 'center',
-              borderBottom: '2px solid #165dff',
-              fontWeight: 500
-            }}
-          >
-            地质预报
-          </div>
-        </div>
-        
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-          <Dropdown 
-            droplist={
-              <Menu>
-                {userMenuItems.map(item => (
-                  <Menu.Item key={item.key}>{item.label}</Menu.Item>
-                ))}
-              </Menu>
-            }
-          >
-            <Space style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: '6px' }} className="user-area">
-              <Avatar size={32} style={{ backgroundColor: '#165dff' }}>
-                <IconUser />
-              </Avatar>
-              <Text>admin</Text>
-              <IconDown />
-            </Space>
-          </Dropdown>
-        </div>
-      </Header>
-
-      <Layout style={{ height: 'calc(100vh - 64px)' }}>
+      <Layout style={{ height: 'calc(100vh - 64px)', flexDirection: 'row' }}>
         {/* 左侧隧道选择面板 */}
-        <Sider 
-          width={280} 
-          style={{ 
-            backgroundColor: '#f7f8fa',
-            borderRight: '1px solid #e8e9ea',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}
-        >
-          <div style={{ 
-            padding: '16px',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              marginBottom: '16px',
-              fontSize: '16px',
-              fontWeight: 500,
-              color: '#1d2129',
-              flexShrink: 0
-            }}>
-              <IconFile style={{ marginRight: '8px', color: '#165dff' }} />
-              标段查询
-            </div>
-            
-            <Search 
-              placeholder="搜索隧道名称或编号"
-              style={{ marginBottom: '16px', flexShrink: 0 }}
-              value={tunnelSearchKeyword}
-              onChange={(value) => handleTunnelSearch(value)}
-              allowClear
-            />
-
-            <div style={{ 
-              marginTop: '20px',
-              flex: 1,
-              overflow: 'auto',
-              minHeight: 0
-            }}>
-              <Spin loading={loadingTunnels}>
-                {filteredTunnels.length === 0 ? (
-                  <Empty 
-                    description="暂无隧道数据"
-                    style={{ padding: '20px 0' }}
-                  />
-                ) : (
-                  filteredTunnels.map((tunnel) => (
-                    <Card
-                      key={tunnel.id}
-                      hoverable
-                      style={{
-                        marginBottom: '8px',
-                        backgroundColor: tunnel.id === selectedTunnel ? '#e8f3ff' : '#fff',
-                        border: tunnel.id === selectedTunnel ? '1px solid #165dff' : '1px solid #e8e9ea',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      bodyStyle={{ padding: '12px 16px' }}
-                      onClick={() => handleTunnelSelect(tunnel.id)}
-                    >
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        color: tunnel.id === selectedTunnel ? '#165dff' : '#1d2129'
-                      }}>
-                        <IconFile style={{ marginRight: '8px' }} />
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{tunnel.name}</div>
-                          <div style={{ fontSize: '12px', color: '#86909c', marginTop: '2px' }}>
-                            {tunnel.code}
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  ))
-                )}
-              </Spin>
-            </div>
-          </div>
-        </Sider>
+        <TunnelSider 
+          searchKeyword={tunnelSearchKeyword}
+          onSearch={handleTunnelSearch}
+          loading={loadingTunnels}
+          tunnels={filteredTunnels}
+          selectedTunnelId={selectedTunnel}
+          onSelectTunnel={handleTunnelSelect}
+        />
 
         {/* 主要内容区域 */}
         <Content style={{ 
@@ -519,414 +338,48 @@ function HelloPage() {
           overflowX: 'hidden'
         }}>
           {/* 统计概览卡片 */}
-          <div style={{ 
-            marginBottom: '24px',
-            display: 'flex',
-            gap: '16px'
-          }}>
-            <Card style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#165dff' }}>
-                {statistics.totalTunnels}
-              </div>
-              <div style={{ color: '#86909c', marginTop: '4px' }}>隧道总数</div>
-            </Card>
-            <Card style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#52c41a' }}>
-                {statistics.totalWorkPoints}
-              </div>
-              <div style={{ color: '#86909c', marginTop: '4px' }}>工点总数</div>
-            </Card>
-            <Card style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#faad14' }}>
-                {statistics.completedWorkPoints}
-              </div>
-              <div style={{ color: '#86909c', marginTop: '4px' }}>已完成</div>
-            </Card>
-            <Card style={{ flex: 1, textAlign: 'center' }}>
-              <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f5222d' }}>
-                {statistics.highRiskPoints}
-              </div>
-              <div style={{ color: '#86909c', marginTop: '4px' }}>高风险工点</div>
-            </Card>
-          </div>
+          <StatisticsCards statistics={statistics} />
 
           {/* 项目信息区域 */}
-          <div style={{ 
-            marginBottom: '10px',
-            padding: '4px 12px',
-            backgroundColor: '#fff',
-            borderRadius: '2px',
-            border: '1px solid #e8e9ea',
-            borderLeft: '2px solid #165dff'
-          }}>
-            <Spin loading={loadingProject}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '24px', fontSize: '12px', lineHeight: '1.2' }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <IconFile style={{ marginRight: '4px', color: '#165dff', fontSize: '12px' }} />
-                  <span style={{ fontWeight: 500, color: '#1d2129', marginRight: '4px' }}>建设单位:</span>
-                  <span style={{ color: '#4e5969' }}>
-                    {projectInfo?.constructionUnit || '中国铁路昆明局集团有限公司'}
-                  </span>
-                </div>
-                
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  <IconFile style={{ marginRight: '4px', color: '#165dff', fontSize: '12px' }} />
-                  <span style={{ fontWeight: 500, color: '#1d2129', marginRight: '4px' }}>项目名称:</span>
-                  <span style={{ color: '#4e5969' }}>
-                    {projectInfo?.name || '渝昆高铁引入昆明枢纽组织工程'}
-                  </span>
-                </div>
-              </div>
-            </Spin>
-          </div>
+          <ProjectInfoBar 
+            loading={loadingProject} 
+            projectInfo={projectInfo} 
+          />
 
           {/* 工点搜索区域 */}
-          <Card 
-            title="工点搜索"
-            style={{ width: '100%' }}
-            extra={
-              <Space>
-                <Search 
-                  placeholder="输入名称搜索"
-                  // style={{ width: 200 }}
-                  value={workPointSearchKeyword}
-                  onChange={(value) => handleWorkPointSearch(value)}
-                  allowClear
-                  searchButton={
-                    <Button type="primary" icon={<IconSearch />}>
-                      搜索
-                    </Button>
-                  }
-                />
-                <Select
-                  placeholder="工点类型"
-                  style={{ width: 120 }}
-                  // value={selectedWorkPointType}
-                  onChange={setSelectedWorkPointType}
-                  allowClear
-                >
-                  <Select.Option value="明洞">明洞</Select.Option>
-                  <Select.Option value="洞门">洞门</Select.Option>
-                  <Select.Option value="主洞段">主洞段</Select.Option>
-                  <Select.Option value="横通道">横通道</Select.Option>
-                  <Select.Option value="暗挖段">暗挖段</Select.Option>
-                  <Select.Option value="救援站">救援站</Select.Option>
-                  <Select.Option value="通风井">通风井</Select.Option>
-                </Select>
-                <Select
-                  placeholder="风险等级"
-                  style={{ width: 100 }}
-                  // value={selectedRiskLevel}
-                  onChange={setSelectedRiskLevel}
-                  allowClear
-                >
-                  <Select.Option value="低风险">
-                    <span style={{ color: '#52c41a' }}>低风险</span>
-                  </Select.Option>
-                  <Select.Option value="中风险">
-                    <span style={{ color: '#faad14' }}>中风险</span>
-                  </Select.Option>
-                  <Select.Option value="高风险">
-                    <span style={{ color: '#f5222d' }}>高风险</span>
-                  </Select.Option>
-                </Select>
-                <Button 
-                  onClick={() => {
-                    // 刷新当前隧道的工点数据
-                    if (selectedTunnel) {
-                      fetchWorkPoints(selectedTunnel);
-                    }
-                  }}
-                >
-                  刷新
-                </Button>
-              </Space>
-            }
-          >
+          <Card title="工点搜索" style={{ width: '100%' }}>
             {/* 搜索条件行 */}
-            <div style={{ 
-              marginBottom: '20px', 
-              padding: '16px', 
-              backgroundColor: '#f7f8fa', 
-              borderRadius: '4px',
-              display: 'flex',
-              gap: '12px',
-              alignItems: 'center'
-            }}>
-              <Input 
-                placeholder="输入名称搜索"
-                style={{ flex: 1, minWidth: '200px' }}
-                value={workPointSearchKeyword}
-                onChange={(value) => handleWorkPointSearch(value)}
-                allowClear
-                prefix={<IconSearch />}
-              />
-              <Select
-                placeholder="工点类型"
-                style={{ width: '160px' }}
-                value={selectedWorkPointType}
-                onChange={setSelectedWorkPointType}
-                allowClear
-              >
-                <Select.Option value="明洞">明洞</Select.Option>
-                <Select.Option value="洞门">洞门</Select.Option>
-                <Select.Option value="主洞段">主洞段</Select.Option>
-                <Select.Option value="横通道">横通道</Select.Option>
-                <Select.Option value="暗挖段">暗挖段</Select.Option>
-                <Select.Option value="救援站">救援站</Select.Option>
-                <Select.Option value="通风井">通风井</Select.Option>
-              </Select>
-              <Select
-                placeholder="风险等级"
-                style={{ width: '160px' }}
-                value={selectedRiskLevel}
-                onChange={setSelectedRiskLevel}
-                allowClear
-              >
-                <Select.Option value="低风险">低风险</Select.Option>
-                <Select.Option value="中风险">中风险</Select.Option>
-                <Select.Option value="高风险">高风险</Select.Option>
-              </Select>
-              <Button 
-                onClick={() => {
-                  // 刷新当前隧道的工点数据
-                  if (selectedTunnel) {
-                    fetchWorkPoints(selectedTunnel);
-                  }
-                }}
-              >
-                刷新
-              </Button>
-            </div>
+            <WorkPointFilter 
+              keyword={workPointSearchKeyword}
+              onSearch={handleWorkPointSearch}
+              type={selectedWorkPointType}
+              onTypeChange={setSelectedWorkPointType}
+              riskLevel={selectedRiskLevel}
+              onRiskLevelChange={setSelectedRiskLevel}
+              onRefresh={() => {
+                if (selectedTunnel) {
+                  fetchWorkPoints(selectedTunnel);
+                }
+              }}
+            />
 
             {/* 工点列表 */}
-            <Spin loading={loadingWorkPoints}>
-                {filteredWorkPoints.length === 0 ? (
-                  <Empty 
-                    description={workPointSearchKeyword ? "未找到匹配的工点" : "暂无工点数据"}
-                    style={{ padding: '40px 0' }}
-                  />
-                ) : (
-                  <Collapse
-                    accordion={false}
-                    style={{ 
-                      backgroundColor: 'transparent', 
-                      border: 'none'
-                    }}
-                    expandIcon={<IconRight />}
-                    expandIconPosition="right"
-                    onChange={(key, keys) => {
-                      // 当展开工点时加载数据
-                      if (typeof key === 'string' && keys.includes(key)) {
-                        const workPoint = filteredWorkPoints.find(wp => wp.id === key);
-                        if (workPoint) {
-                          handleOpenWorkPointDetail(workPoint);
-                        }
-                      }
-                    }}
-                  >
-                  {filteredWorkPoints.map((item) => (
-                    <CollapseItem
-                      key={item.id}
-                      header={
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          width: '100%'
-                        }}>
-                          <IconFile style={{ 
-                            marginRight: '12px', 
-                            color: '#165dff', 
-                            fontSize: '16px'
-                          }} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ 
-                              fontWeight: 500,
-                              color: '#1d2129',
-                              fontSize: '15px',
-                              marginBottom: '6px'
-                            }}>
-                              {item.name}
-                            </div>
-                            <div style={{ 
-                              fontSize: '13px', 
-                              color: '#86909c',
-                              display: 'flex',
-                              gap: '16px',
-                              flexWrap: 'wrap'
-                            }}>
-                              <span>里程: {item.code}</span>
-                              <span>长度: {item.length > 0 ? '+' : ''}{item.length}m</span>
-                              {item.type && <span>类型: {item.type}</span>}
-                              {item.riskLevel && (
-                                <span style={{ 
-                                  color: item.riskLevel === '高风险' ? '#f53f3f' : 
-                                         item.riskLevel === '中风险' ? '#ff7d00' : '#00b42a',
-                                  fontWeight: 500
-                                }}>
-                                  {item.riskLevel}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      }
-                      name={item.id}
-                      destroyOnHide
-                    >
-                      {/* 工点详细内容 */}
-                      <div style={{ padding: '20px' }}>
-                        {/* 探测信息图表 */}
-                        <Card 
-                          title={<span style={{ fontSize: '16px', fontWeight: 500 }}>探测信息</span>}
-                          style={{ marginBottom: '20px' }}
-                          bodyStyle={{ padding: '24px' }}
-                        >
-                          <Spin loading={loadingDetection}>
-                            {detectionData && selectedWorkPoint?.id === item.id ? (
-                              <DetectionChart data={detectionData} />
-                            ) : (
-                              <Empty description="暂无探测数据" style={{ padding: '60px 0' }} />
-                            )}
-                          </Spin>
-                        </Card>
-
-                        {/* 五种预报方法选项卡 */}
-                        <Card bodyStyle={{ padding: 0 }}>
-                          <Spin loading={loadingForecastMethods}>
-                            <Tabs defaultActiveTab="geophysical" type="card-gutter">
-                              <TabPane key="geophysical" title={`物探法 (${geophysicalData.length})`}>
-                                <div style={{ padding: '24px' }}>
-                                  {geophysicalData.length > 0 ? (
-                                    <Table
-                                      columns={[
-                                        { title: 'ID', dataIndex: 'wtfPk', width: 80 },
-                                        { title: '方法', dataIndex: 'methodName', width: 120, render: (text, record) => text || record.method },
-                                        { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
-                                        { title: '长度(m)', dataIndex: 'wtfLength', width: 100 },
-                                        { title: '监测日期', dataIndex: 'monitordate', width: 120 },
-                                        { title: '备注', dataIndex: 'addition' }
-                                      ]}
-                                      data={geophysicalData}
-                                      pagination={false}
-                                      rowKey="wtfPk"
-                                    />
-                                  ) : (
-                                    <Empty description="暂无物探法数据" />
-                                  )}
-                                </div>
-                              </TabPane>
-                              <TabPane key="palm-sketch" title={`掌子面素描 (${palmSketchData.length})`}>
-                                <div style={{ padding: '24px' }}>
-                                  {palmSketchData.length > 0 ? (
-                                    <Table
-                                      columns={[
-                                        { title: 'ID', dataIndex: 'zzmsmPk', width: 80 },
-                                        { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
-                                        { title: '围岩等级', dataIndex: 'rockGrade', width: 100 },
-                                        { title: '涌水情况', dataIndex: 'waterInflow', width: 100 },
-                                        { title: '监测日期', dataIndex: 'monitordate', width: 120 },
-                                        { title: '备注', dataIndex: 'addition' }
-                                      ]}
-                                      data={palmSketchData}
-                                      pagination={false}
-                                      rowKey="zzmsmPk"
-                                    />
-                                  ) : (
-                                    <Empty description="暂无掌子面素描数据" />
-                                  )}
-                                </div>
-                              </TabPane>
-                              <TabPane key="tunnel-sketch" title={`洞身素描 (${tunnelSketchData.length})`}>
-                                <div style={{ padding: '24px' }}>
-                                  {tunnelSketchData.length > 0 ? (
-                                    <Table
-                                      columns={[
-                                        { title: 'ID', dataIndex: 'dssmPk', width: 80 },
-                                        { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
-                                        { title: '衬砌厚度(cm)', dataIndex: 'liningThickness', width: 120 },
-                                        { title: '裂缝数量', dataIndex: 'crackCount', width: 100 },
-                                        { title: '监测日期', dataIndex: 'monitordate', width: 120 },
-                                        { title: '备注', dataIndex: 'addition' }
-                                      ]}
-                                      data={tunnelSketchData}
-                                      pagination={false}
-                                      rowKey="dssmPk"
-                                    />
-                                  ) : (
-                                    <Empty description="暂无洞身素描数据" />
-                                  )}
-                                </div>
-                              </TabPane>
-                              <TabPane key="drilling" title={`钻探法 (${drillingData.length})`}>
-                                <div style={{ padding: '24px' }}>
-                                  {drillingData.length > 0 ? (
-                                    <Table
-                                      columns={[
-                                        { title: 'ID', dataIndex: 'ztfPk', width: 80 },
-                                        { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
-                                        { title: '钻探深度(m)', dataIndex: 'drillDepth', width: 120 },
-                                        { title: '取芯长度(m)', dataIndex: 'coreLength', width: 120 },
-                                        { title: '岩石类型', dataIndex: 'rockType', width: 100 },
-                                        { title: '监测日期', dataIndex: 'monitordate', width: 120 },
-                                        { title: '备注', dataIndex: 'addition' }
-                                      ]}
-                                      data={drillingData}
-                                      pagination={false}
-                                      rowKey="ztfPk"
-                                    />
-                                  ) : (
-                                    <Empty description="暂无钻探法数据" />
-                                  )}
-                                </div>
-                              </TabPane>
-                              <TabPane key="surface" title="地表补充">
-                                <div style={{ padding: '24px' }}>
-                                  {surfaceData ? (
-                                    <div>
-                                      <pre>{JSON.stringify(surfaceData, null, 2)}</pre>
-                                    </div>
-                                  ) : (
-                                    <Empty description="暂无地表补充数据" />
-                                  )}
-                                </div>
-                              </TabPane>
-                            </Tabs>
-                          </Spin>
-                        </Card>
-
-                        {/* 三个导航按钮 */}
-                        <Card bodyStyle={{ padding: '24px' }} style={{ marginTop: '20px' }}>
-                          <Space size="large">
-                            <Button
-                              type="primary"
-                              size="large"
-                              onClick={() => navigate('/forecast/design')}
-                            >
-                              设计信息
-                            </Button>
-                            <Button
-                              type="primary"
-                              size="large"
-                              onClick={() => navigate(`/forecast/geology/${item.id}`)}
-                            >
-                              地质预报
-                            </Button>
-                            <Button 
-                              type="primary"
-                              size="large"
-                              onClick={() => navigate('/forecast/comprehensive')}
-                            >
-                              综合结论
-                            </Button>
-                          </Space>
-                        </Card>
-                      </div>
-                    </CollapseItem>
-                  ))}
-                </Collapse>
-              )}
-            </Spin>
+            <WorkPointList 
+              loading={loadingWorkPoints}
+              workPoints={filteredWorkPoints}
+              searchKeyword={workPointSearchKeyword}
+              onExpand={handleOpenWorkPointDetail}
+              loadingDetection={loadingDetection}
+              detectionData={detectionData}
+              selectedWorkPointId={selectedWorkPoint?.id}
+              loadingForecastMethods={loadingForecastMethods}
+              geophysicalData={geophysicalData}
+              palmSketchData={palmSketchData}
+              tunnelSketchData={tunnelSketchData}
+              drillingData={drillingData}
+              surfaceData={surfaceData}
+              onNavigate={navigate}
+            />
           </Card>
         </Content>
       </Layout>
