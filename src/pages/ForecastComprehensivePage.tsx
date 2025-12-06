@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   Card, 
   Button, 
@@ -14,53 +14,63 @@ import {
   Typography,
   Message
 } from '@arco-design/web-react'
-import { IconUser, IconDown } from '@arco-design/web-react/icon'
+import { IconUser, IconDown, IconLeft } from '@arco-design/web-react/icon'
+import { useNavigate, useLocation } from 'react-router-dom'
+import realAPI from '../services/realAPI'
 
 const { Header, Content } = Layout
 const { Text } = Typography
 const { RangePicker } = DatePicker
 
-// 模拟数据
-const mockData = [
-  {
-    id: '2185727',
-    recordCode: '2185727',
-    disposalType: '综合结论',
-    createTime: '2022-04-12 17:38:30',
-    status: '已处置',
-  },
-  {
-    id: '2185656',
-    recordCode: '2185656',
-    disposalType: '综合结论',
-    createTime: '2022-04-12 17:00:33',
-    status: '已处置',
-  },
-  {
-    id: '2185445',
-    recordCode: '2185445',
-    disposalType: '综合结论',
-    createTime: '2022-04-12 16:45:22',
-    status: '已处置',
-  },
-  {
-    id: '2185234',
-    recordCode: '2185234',
-    disposalType: '综合结论',
-    createTime: '2022-04-12 16:20:15',
-    status: '已处置',
-  },
-  {
-    id: '2185023',
-    recordCode: '2185023',
-    disposalType: '综合结论',
-    createTime: '2022-04-12 15:55:48',
-    status: '已处置',
-  },
-]
-
 function ForecastComprehensivePage() {
+  const navigate = useNavigate()
+  const location = useLocation()
   const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [data, setData] = useState<any[]>([])
+  
+  // 获取URL参数
+  const searchParams = new URLSearchParams(location.search)
+  const siteId = searchParams.get('siteId')
+
+  // 加载数据
+  const fetchData = async () => {
+    setLoading(true)
+    try {
+      console.log('🚀 [ForecastComprehensivePage] 开始加载数据, siteId:', siteId)
+      // 目前API暂不支持siteId筛选，但预留此逻辑
+      const res = await realAPI.getComprehensiveConclusionList({
+        pageNum: 1,
+        pageSize: 10
+      })
+      
+      console.log('✅ [ForecastComprehensivePage] 获取数据成功:', res)
+      if (res && res.records) {
+        // 适配返回的数据结构
+        const adaptedData = res.records.map((item: any) => ({
+          id: String(item.zhjlPk || item.id),
+          recordCode: item.zhjlId || item.recordCode || '-',
+          disposalType: '综合结论', // 默认值
+          createTime: item.gmtCreate || item.createTime || '-',
+          status: item.warndealflag === 1 ? '已处置' : '未处置',
+          // 保留原始数据
+          ...item
+        }))
+        setData(adaptedData)
+      } else {
+        setData([])
+      }
+    } catch (error) {
+      console.error('❌ [ForecastComprehensivePage] 加载数据失败:', error)
+      Message.error('加载数据失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [siteId])
 
   // 查看详情 - 展开/收起行
   const handleViewDetail = (record: any) => {
@@ -74,7 +84,7 @@ function ForecastComprehensivePage() {
   // 将数据转换为包含展开行的数组
   const getTableData = () => {
     const result: any[] = []
-    mockData.forEach(record => {
+    data.forEach(record => {
       result.push(record)
       if (expandedRowKey === record.id) {
         // 添加展开行
@@ -311,9 +321,11 @@ function ForecastComprehensivePage() {
           <span>站前3标/青龙山隧道/青龙山隧道出口明洞</span>
           <Button 
             type="text" 
-            icon={<span style={{ color: '#fff' }}>↩</span>}
+            icon={<IconLeft />}
             style={{ color: '#fff' }}
+            onClick={() => navigate('/geo-forecast')}
           >
+            返回
           </Button>
         </div>
 
@@ -373,10 +385,11 @@ function ForecastComprehensivePage() {
         {/* 数据表格 */}
         <Card>
           <Table
+            loading={loading}
             columns={columns}
             data={getTableData()}
             pagination={{
-              total: mockData.length,
+              total: data.length,
               pageSize: 10,
               showTotal: true,
               showJumper: true,
