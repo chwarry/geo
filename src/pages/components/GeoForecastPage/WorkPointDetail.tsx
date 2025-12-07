@@ -13,8 +13,27 @@ interface WorkPointDetailProps {
   palmSketchData: any[];
   tunnelSketchData: any[];
   drillingData: any[];
+  surfaceData: any[];
   onNavigate: (path: string) => void;
 }
+
+// 方法类型映射
+const methodTypeMap: Record<number, string> = {
+  1: '物探法',
+  2: '掌子面素描',
+  3: '洞身素描',
+  4: '钻探法',
+  5: '地表补充'
+};
+
+// 物探法子方法映射
+const geophysicalMethodMap: Record<number, string> = {
+  1: '地震波反射',
+  2: '地质雷达',
+  3: '瞬变电磁',
+  4: '红外探测',
+  5: '其它'
+};
 
 const WorkPointDetail: React.FC<WorkPointDetailProps> = ({
   workPointId,
@@ -25,8 +44,93 @@ const WorkPointDetail: React.FC<WorkPointDetailProps> = ({
   palmSketchData,
   tunnelSketchData,
   drillingData,
+  surfaceData,
   onNavigate
 }) => {
+  // 查看详情按钮点击处理
+  const handleViewDetail = (record: any, methodType: string) => {
+    const pk = record.ybPk || record.wtfPk || record.zzmsmPk || record.dssmPk || record.ztfPk || record.dbbcPk;
+    onNavigate(`/forecast/geology/detail/${methodType}/${pk}`);
+  };
+
+  // 通用表格列配置
+  const getColumns = (methodType: string) => [
+    { 
+      title: '预报方法', 
+      dataIndex: 'wtfMethod',
+      width: 120,
+      render: (val: number, record: any) => {
+        // 物探法显示子方法名称
+        if (methodType === 'geophysical') {
+          return geophysicalMethodMap[val] || geophysicalMethodMap[record.method] || '物探法';
+        }
+        return methodTypeMap[record.method] || methodType;
+      }
+    },
+    { 
+      title: '预报时间', 
+      dataIndex: 'monitordate', 
+      width: 160,
+      render: (val: string) => {
+        if (!val) return '-';
+        // 格式化为 YYYY-MM-DD HH:mm:ss
+        return val.replace('T', ' ').substring(0, 19);
+      }
+    },
+    { 
+      title: '掌子面里程', 
+      dataIndex: 'dkilo', 
+      width: 150, 
+      render: (val: number, record: any) => {
+        const dkname = record.dkname || 'D1K';
+        if (!val) return '-';
+        // 格式化里程显示，如 D1K725+755.00
+        const kiloStr = val.toFixed(2);
+        const intPart = Math.floor(val / 1000);
+        const decPart = (val % 1000).toFixed(2);
+        return `${dkname}${intPart}+${decPart}`;
+      }
+    },
+    { 
+      title: '长度', 
+      dataIndex: 'ybLength', 
+      width: 80,
+      render: (val: number, record: any) => val || record.wtfLength || record.dbbcLength || '-'
+    },
+    { 
+      title: '状态', 
+      dataIndex: 'submitFlag', 
+      width: 80,
+      render: () => (
+        <span style={{ color: '#00b42a' }}>已上传</span>
+      )
+    },
+    {
+      title: '操作',
+      width: 80,
+      render: (_: any, record: any) => (
+        <Button 
+          type="text" 
+          size="small"
+          style={{ color: '#165dff' }}
+          onClick={() => handleViewDetail(record, methodType)}
+        >
+          <span style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: 24, 
+            height: 24, 
+            borderRadius: 4,
+            backgroundColor: '#e8f3ff'
+          }}>
+            📋
+          </span>
+        </Button>
+      )
+    }
+  ];
+
   return (
     <div style={{ padding: '20px' }}>
       {/* 探测信息图表 */}
@@ -44,7 +148,7 @@ const WorkPointDetail: React.FC<WorkPointDetailProps> = ({
         </Spin>
       </Card>
 
-      {/* 五种预报方法选项卡 */}
+      {/* 五种预报方法选项卡 - 只显示已上传的数据 */}
       <Card bodyStyle={{ padding: 0 }}>
         <Spin loading={isLoadingForecast && geophysicalData.length === 0}>
           <Tabs defaultActiveTab="geophysical" type="card-gutter">
@@ -52,20 +156,13 @@ const WorkPointDetail: React.FC<WorkPointDetailProps> = ({
               <div style={{ padding: '24px' }}>
                 {geophysicalData.length > 0 ? (
                   <Table
-                    columns={[
-                      { title: 'ID', dataIndex: 'wtfPk', width: 80 },
-                      { title: '方法', dataIndex: 'methodName', width: 120, render: (text, record) => text || record.method },
-                      { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
-                      { title: '长度(m)', dataIndex: 'wtfLength', width: 100 },
-                      { title: '监测日期', dataIndex: 'monitordate', width: 120 },
-                      { title: '备注', dataIndex: 'addition' }
-                    ]}
+                    columns={getColumns('geophysical')}
                     data={geophysicalData}
                     pagination={false}
-                    rowKey="wtfPk"
+                    rowKey={(record) => record.ybPk || record.wtfPk}
                   />
                 ) : (
-                  <Empty description="暂无物探法数据" />
+                  <Empty description="暂无已上传的物探法数据" />
                 )}
               </div>
             </TabPane>
@@ -73,20 +170,13 @@ const WorkPointDetail: React.FC<WorkPointDetailProps> = ({
               <div style={{ padding: '24px' }}>
                 {palmSketchData.length > 0 ? (
                   <Table
-                    columns={[
-                      { title: 'ID', dataIndex: 'zzmsmPk', width: 80 },
-                      { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
-                      { title: '围岩等级', dataIndex: 'rockGrade', width: 100 },
-                      { title: '涌水情况', dataIndex: 'waterInflow', width: 100 },
-                      { title: '监测日期', dataIndex: 'monitordate', width: 120 },
-                      { title: '备注', dataIndex: 'addition' }
-                    ]}
+                    columns={getColumns('palmSketch')}
                     data={palmSketchData}
                     pagination={false}
-                    rowKey="zzmsmPk"
+                    rowKey={(record) => record.ybPk || record.zzmsmPk}
                   />
                 ) : (
-                  <Empty description="暂无掌子面素描数据" />
+                  <Empty description="暂无已上传的掌子面素描数据" />
                 )}
               </div>
             </TabPane>
@@ -94,20 +184,13 @@ const WorkPointDetail: React.FC<WorkPointDetailProps> = ({
               <div style={{ padding: '24px' }}>
                 {tunnelSketchData.length > 0 ? (
                   <Table
-                    columns={[
-                      { title: 'ID', dataIndex: 'dssmPk', width: 80 },
-                      { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
-                      { title: '衬砌厚度(cm)', dataIndex: 'liningThickness', width: 120 },
-                      { title: '裂缝数量', dataIndex: 'crackCount', width: 100 },
-                      { title: '监测日期', dataIndex: 'monitordate', width: 120 },
-                      { title: '备注', dataIndex: 'addition' }
-                    ]}
+                    columns={getColumns('tunnelSketch')}
                     data={tunnelSketchData}
                     pagination={false}
-                    rowKey="dssmPk"
+                    rowKey={(record) => record.ybPk || record.dssmPk}
                   />
                 ) : (
-                  <Empty description="暂无洞身素描数据" />
+                  <Empty description="暂无已上传的洞身素描数据" />
                 )}
               </div>
             </TabPane>
@@ -115,27 +198,28 @@ const WorkPointDetail: React.FC<WorkPointDetailProps> = ({
               <div style={{ padding: '24px' }}>
                 {drillingData.length > 0 ? (
                   <Table
-                    columns={[
-                      { title: 'ID', dataIndex: 'ztfPk', width: 80 },
-                      { title: '里程', dataIndex: 'dkilo', width: 120, render: (val) => `DK${val}` },
-                      { title: '钻探深度(m)', dataIndex: 'drillDepth', width: 120 },
-                      { title: '取芯长度(m)', dataIndex: 'coreLength', width: 120 },
-                      { title: '岩石类型', dataIndex: 'rockType', width: 100 },
-                      { title: '监测日期', dataIndex: 'monitordate', width: 120 },
-                      { title: '备注', dataIndex: 'addition' }
-                    ]}
+                    columns={getColumns('drilling')}
                     data={drillingData}
                     pagination={false}
-                    rowKey="ztfPk"
+                    rowKey={(record) => record.ybPk || record.ztfPk}
                   />
                 ) : (
-                  <Empty description="暂无钻探法数据" />
+                  <Empty description="暂无已上传的钻探法数据" />
                 )}
               </div>
             </TabPane>
-            <TabPane key="surface" title="地表补充">
+            <TabPane key="surface" title={`地表补充 (${surfaceData.length})`}>
               <div style={{ padding: '24px' }}>
-                <Empty description="暂无地表补充数据" />
+                {surfaceData.length > 0 ? (
+                  <Table
+                    columns={getColumns('surface')}
+                    data={surfaceData}
+                    pagination={false}
+                    rowKey={(record) => record.ybPk || record.dbbcPk}
+                  />
+                ) : (
+                  <Empty description="暂无已上传的地表补充数据" />
+                )}
               </div>
             </TabPane>
           </Tabs>
@@ -173,4 +257,3 @@ const WorkPointDetail: React.FC<WorkPointDetailProps> = ({
 };
 
 export default WorkPointDetail;
-

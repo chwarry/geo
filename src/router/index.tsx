@@ -9,7 +9,8 @@ import ForecastDesignPage from '../pages/ForecastDesignPage'
 import ForecastRockPage from '../pages/ForecastRockPage'
 import ForecastGeologyPage from '../pages/ForecastGeologyPage'
 import GeologyForecastPage from '../pages/GeologyForecastPage'
-import GeologyForecastEditPage from '../pages/GeologyForecastEditPage'
+import ForecastEditRouter from '../pages/ForecastEditRouter'
+import ForecastDetailRouter from '../pages/ForecastDetailRouter'
 import ForecastComprehensivePage from '../pages/ForecastComprehensivePage'
 import WorkPointDetailPage from '../pages/WorkPointDetailPage'
 import DesignLayout from '../components/DesignLayout'
@@ -108,7 +109,15 @@ const router = createBrowserRouter([
     path: 'forecast/geology/edit/:type/:id',
     element: (
       <ProtectedRoute>
-        <GeologyForecastEditPage />
+        <ForecastEditRouter />
+      </ProtectedRoute>
+    )
+  },
+  {
+    path: 'forecast/geology/detail/:type/:id',
+    element: (
+      <ProtectedRoute>
+        <ForecastDetailRouter />
       </ProtectedRoute>
     )
   },
@@ -126,9 +135,7 @@ const router = createBrowserRouter([
     path: 'forecast/comprehensive',
     element: (
       <ProtectedRoute>
-        <DesignLayout>
-          <ForecastComprehensivePage />
-        </DesignLayout>
+        <ForecastComprehensivePage />
       </ProtectedRoute>
     )
   },

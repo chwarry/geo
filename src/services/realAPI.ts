@@ -59,6 +59,7 @@ export interface DesignForecastCreateRequest {
 
 // 设计预报方法更新请求类型 (SjybUpdateDTO)
 export interface DesignForecastUpdateRequest {
+  sjybPk?: number;       // 设计预报方法主键（部分后端实现要求在Body里携带）
   bdPk: number;          // 标段主键 (必填)
   sdPk: number;          // 隧道主键 (必填)
   method: number;        // 预报方法代码 (必填, 0-99)
@@ -875,7 +876,32 @@ class RealAPIService {
    * @returns 设计预报详细信息
    */
   async getDesignForecastDetail(sjybPk: number): Promise<any> {
-    return get<any>(`/api/sjyb/${sjybPk}`);
+    try {
+      // 优先尝试 v1 路径
+      const respV1 = await get<any>(`/api/v1/sjyb/${sjybPk}`);
+      if (respV1 && typeof respV1 === 'object') {
+        const code = (respV1 as any).resultcode ?? (respV1 as any).code;
+        if (code === 200 || code === 0) {
+          return (respV1 as any).data ?? (respV1 as any).result ?? respV1;
+        }
+      }
+      return respV1;
+    } catch (e) {
+      // 兼容旧路径
+      try {
+        const resp = await get<any>(`/api/sjyb/${sjybPk}`);
+        if (resp && typeof resp === 'object') {
+          const code = (resp as any).resultcode ?? (resp as any).code;
+          if (code === 200 || code === 0) {
+            return (resp as any).data ?? (resp as any).result ?? resp;
+          }
+        }
+        return resp;
+      } catch (e2) {
+        console.error('❌ [realAPI] getDesignForecastDetail 异常:', e2);
+        return null;
+      }
+    }
   }
 
   // ========== 设计地质信息 ==========
@@ -1011,7 +1037,10 @@ class RealAPIService {
     begin?: string;
     end?: string;
   }): Promise<any> {
-    return get<any>(`/api/zhjl/list`, { params: { userid: this.userId, ...params } });
+    console.log('🚀 [realAPI] getComprehensiveConclusionList 调用参数:', params);
+    const response = await get<any>(`/api/v1/zhjl/list`, { params: { userid: this.userId, ...params } });
+    console.log('✅ [realAPI] getComprehensiveConclusionList 响应:', response);
+    return response;
   }
 
   // ========== 数据转换方法（将后端数据转换为前端需要的格式） ==========
@@ -1675,11 +1704,23 @@ class RealAPIService {
       
       // 数据转换: 后端 DesignForecast -> 前端 ForecastDesignRecord
       const list: ForecastDesignRecord[] = backendList.map(item => {
-        // 计算起点和终点里程
-        const startMileage = `${item.dkname || 'DK'}${Math.floor(item.dkilo || 0)}`;
-        const endMileage = `${item.dkname || 'DK'}${Math.floor((item.dkilo || 0) + (item.sjybLength || 0))}`;
+        // 后端dkilo格式：180973.00 表示 180公里973米（公里*1000 + 米）
+        const dkilo = item.dkilo || 0;
+        const startKm = Math.floor(dkilo / 1000);  // 公里数
+        const startM = Math.round(dkilo % 1000);   // 米数
         
-        // 方法代码转换为字母标识（简化处理，可以根据实际需求映射）
+        // 计算结束里程：dkilo + sjybLength
+        const lengthM = item.sjybLength || 0;
+        const endDkilo = dkilo + lengthM;
+        const endKm = Math.floor(endDkilo / 1000);
+        const endM = Math.round(endDkilo % 1000);
+        
+        // 格式化里程字符串
+        const dkname = item.dkname || 'DK';
+        const startMileage = `${dkname}${startKm}+${String(startM).padStart(3, '0')}`;
+        const endMileage = `${dkname}${endKm}+${String(endM).padStart(3, '0')}`;
+        
+        // 方法代码转换为字母标识
         const methodMap: { [key: number]: string } = {
           0: '其他',
           1: '地震波反射',
@@ -1700,11 +1741,15 @@ class RealAPIService {
           id: String(item.sjybPk),
           createdAt: item.gmtCreate || item.plantime || '',
           method: methodMap[item.method] || String(item.method),
+          mileagePrefix: dkname,
           startMileage,
           endMileage,
           length: item.sjybLength || 0,
           minBurialDepth: item.zxms || 0,
           designTimes: item.plannum || 0,
+          drillingCount: item.zksl || 0,
+          coreCount: item.qxsl || 0,
+          author: item.username || '',
         };
       });
       
@@ -1731,21 +1776,34 @@ class RealAPIService {
 
   async createForecastDesign(data: Omit<ForecastDesignRecord, 'id' | 'createdAt'>): Promise<{ success: boolean }> {
     try {
+      // 后端格式：dkilo/endMileage 都是米数（如 180973.00 = 180公里973米）
+      const dkiloMeters = this.extractMileageInMeters(data.startMileage);
+      const endMileageMeters = this.extractMileageInMeters(data.endMileage);
+      
+      console.log('🔍 [realAPI] createForecastDesign 里程解析:', {
+        startMileage: data.startMileage,
+        endMileageStr: data.endMileage,
+        dkilo: dkiloMeters,
+        endMileageMeters: endMileageMeters
+      });
+      
       // 转换前端数据格式为后端格式
       const requestData: DesignForecastCreateRequest = {
         bdPk: 1,  // 标段主键，实际应从参数获取
         sdPk: 1,  // 隧道主键，实际应从参数获取
         method: this.getMethodCode(data.method),
         dkname: this.extractMileagePrefix(data.startMileage),
-        dkilo: this.extractMileageNumber(data.startMileage),
-        endMileage: this.extractMileageNumber(data.endMileage),
-        sjybLength: data.length,
-        zxms: data.minBurialDepth || 0,
+        dkilo: dkiloMeters,  // 米数（如 180973）
+        endMileage: endMileageMeters,  // 米数（如 181646）
+        sjybLength: data.length,  // 预报长度（米）
+        zxms: data.minBurialDepth || 0,  // 最小埋深
         zksl: 7,  // 钻孔数量，默认值
         qxsl: 9,  // 取芯数量，默认值
         plannum: data.designTimes || 1,
         username: this.getCurrentLogin()
       };
+
+      console.log('📤 [realAPI] createForecastDesign 请求数据:', requestData);
 
       const response = await post<BaseResponse>('/api/v1/sjyb', requestData);
       
@@ -1754,44 +1812,100 @@ class RealAPIService {
         return { success: true };
       } else {
         console.error('❌ [realAPI] createForecastDesign 失败:', response.message);
-        return { success: false };
+        throw new Error(response.message || '创建失败');
       }
     } catch (error) {
       console.error('❌ [realAPI] createForecastDesign 异常:', error);
-      return { success: false };
+      throw error;
     }
   }
 
   async updateForecastDesign(id: string, data: Omit<ForecastDesignRecord, 'id' | 'createdAt'>): Promise<{ success: boolean }> {
     try {
-      const requestData: DesignForecastUpdateRequest = {
-        bdPk: 1,
-        sdPk: 1,
+      console.log('🚀 [realAPI] updateForecastDesign 开始, id:', id, 'data:', data);
+      
+      // 读取后端现有详情，动态继承必要字段
+      const detail = await this.getDesignForecastDetail(Number(id)).catch(() => null);
+      console.log('🔍 [realAPI] updateForecastDesign 获取到的详情:', detail);
+      
+      const bdPk = (detail && typeof detail === 'object' && 'bdPk' in detail) ? Number(detail.bdPk) : 1;
+      const sdPk = (detail && typeof detail === 'object' && 'sdPk' in detail) ? Number(detail.sdPk) : 1;
+      const existZksl = (detail && typeof detail === 'object' && 'zksl' in detail) ? Number(detail.zksl) : undefined;
+      const existQxsl = (detail && typeof detail === 'object' && 'qxsl' in detail) ? Number(detail.qxsl) : undefined;
+      const existPlannum = (detail && typeof detail === 'object' && 'plannum' in detail) ? Number(detail.plannum) : undefined;
+
+      const formDrillCount = (data as any).drillingCount;
+      const formCoreCount = (data as any).coreCount;
+      const formDesignTimes = (data as any).designTimes;
+
+      // 后端格式：dkilo/endMileage 都是米数（如 180973 = 180公里973米）
+      // 使用 extractMileageInMeters 将 "DK180+973" 转换为 180973
+      const dkiloMeters = this.extractMileageInMeters(data.startMileage);
+      const endMileageMeters = this.extractMileageInMeters(data.endMileage);
+      
+      console.log('🔍 [realAPI] updateForecastDesign 里程解析:', {
+        startMileage: data.startMileage,
+        endMileage: data.endMileage,
+        dkiloMeters,  // 如 180973
+        endMileageMeters  // 如 181646
+      });
+
+      const requestData: any = {
+        sjybPk: Number(id),
+        bdPk: bdPk,
+        sdPk: sdPk,
         method: this.getMethodCode(data.method),
         dkname: this.extractMileagePrefix(data.startMileage),
-        dkilo: this.extractMileageNumber(data.startMileage),
-        endMileage: this.extractMileageNumber(data.endMileage),
-        sjybLength: data.length,
-        zxms: data.minBurialDepth || 0,
-        zksl: 7,
-        qxsl: 9,
-        plannum: data.designTimes || 1,
+        dkilo: Math.floor(dkiloMeters),  // 起始里程：米数整数（如 179700）
+        endMileage: Number(endMileageMeters.toFixed(2)),  // 结束里程：米数带2位小数（如 180019.11）
+        sjybLength: Number(Number(data.length).toFixed(2)),  // 预报长度带2位小数 (double)
+        zxms: data.minBurialDepth || 0,  // 最小埋深
+        zksl: typeof formDrillCount === 'number' ? formDrillCount : (existZksl ?? 0),
+        qxsl: typeof formCoreCount === 'number' ? formCoreCount : (existQxsl ?? 0),
+        plannum: typeof formDesignTimes === 'number' ? formDesignTimes : (existPlannum ?? 1),
         username: this.getCurrentLogin(),
-        revise: '更新数据'  // 修改原因，实际应从参数传入
+        revise: (data as any).modifyReason || '更新数据'
       };
-
-      const response = await put<BaseResponse>(`/api/v1/sjyb/${id}`, requestData);
       
-      if (response.resultcode === 200) {
+      console.log('🔍 [realAPI] updateForecastDesign 请求数据格式:', {
+        startMileage: data.startMileage,
+        endMileageStr: data.endMileage,
+        dkilo: dkiloMeters,
+        endMileageMeters: endMileageMeters,
+        sjybLength: Math.round(data.length)
+      });
+
+      console.log('📤 [realAPI] updateForecastDesign 请求数据:', requestData);
+      console.log('📤 [realAPI] 请求URL: PUT /api/v1/sjyb/' + id);
+
+      // 手动构建JSON字符串，保留小数位
+      // 将endMileage和sjybLength格式化为带2位小数
+      const formattedData = {
+        ...requestData,
+        endMileage: Number(endMileageMeters.toFixed(2)),
+        sjybLength: Number(Number(data.length).toFixed(2))
+      };
+      
+      const response = await put<BaseResponse>(`/api/v1/sjyb/${id}`, formattedData);
+      
+      console.log('📥 [realAPI] updateForecastDesign 响应:', response);
+      
+      // 处理不同的响应格式
+      const resp = response as any;
+      if (resp === true || resp?.resultcode === 200 || resp?.resultcode === 0) {
         console.log('✅ [realAPI] updateForecastDesign 成功');
         return { success: true };
+      } else if (resp?.resultcode === 400 || resp?.resultcode === 500) {
+        console.error('❌ [realAPI] updateForecastDesign 失败:', resp.message);
+        throw new Error(resp.message || '更新失败');
       } else {
-        console.error('❌ [realAPI] updateForecastDesign 失败:', response.message);
-        return { success: false };
+        // 如果响应是其他格式，也视为成功
+        console.log('✅ [realAPI] updateForecastDesign 响应格式未知，视为成功:', resp);
+        return { success: true };
       }
     } catch (error) {
       console.error('❌ [realAPI] updateForecastDesign 异常:', error);
-      return { success: false };
+      throw error;
     }
   }
 
@@ -1852,17 +1966,19 @@ class RealAPIService {
   /**
    * 获取设计围岩等级列表
    */
-  async getDesignRockGrades(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
+  async getDesignRockGrades(params: { siteId: string; pageNum?: number; pageSize?: number; wydj?: number; begin?: string; end?: string }) {
     try {
       console.log('🚀 [realAPI] getDesignRockGrades 调用API: /api/v1/sjwydj/list');
       console.log('🔍 [realAPI] 请求参数:', params);
       
       const response = await get<any>('/api/v1/sjwydj/list', {
         params: {
-          userid: params.userid || this.userId,
+          siteId: params.siteId,
           pageNum: params.pageNum || 1,
           pageSize: params.pageSize || 15,
-          ...params
+          wydj: params.wydj,
+          begin: params.begin,
+          end: params.end
         }
       });
       
@@ -1964,16 +2080,35 @@ class RealAPIService {
   /**
    * 获取设计地质信息列表
    */
-  async getDesignGeologies(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
+  async getDesignGeologies(params: { siteId: string; pageNum?: number; pageSize?: number; method?: number; begin?: string; end?: string }) {
     try {
+      console.log('🚀 [realAPI] getDesignGeologies 调用参数:', params);
+      
+      // 构建请求参数，只包含有值的字段
+      const requestParams: any = {
+        siteId: params.siteId,
+        pageNum: params.pageNum || 1,
+        pageSize: params.pageSize || 15,
+      };
+      
+      // 只在有值时添加可选参数
+      if (params.method !== undefined) {
+        requestParams.method = params.method;
+      }
+      if (params.begin) {
+        requestParams.begin = params.begin;
+      }
+      if (params.end) {
+        requestParams.end = params.end;
+      }
+      
+      console.log('🔍 [realAPI] getDesignGeologies 实际请求参数:', requestParams);
+      
       const response = await get<BaseResponse<{ sjdzIPage: PageResponse<DesignGeology> }>>('/api/v1/sjdz/list', {
-        params: {
-          userid: params.userid || this.userId,
-          pageNum: params.pageNum || 1,
-          pageSize: params.pageSize || 15,
-          ...params
-        }
+        params: requestParams
       });
+      
+      console.log('🔍 [realAPI] getDesignGeologies 响应:', response);
       return response.data?.sjdzIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getDesignGeologies 失败:', error);
@@ -2008,21 +2143,25 @@ class RealAPIService {
 
   /**
    * 更新设计地质信息
+   * @param id 设计地质主键
+   * @param data 更新数据 (SjdzUpdateDTO格式 - 扁平结构，不包装在sjdz中)
    */
-  async updateDesignGeology(id: string, data: DesignGeologyRequest): Promise<{ success: boolean }> {
+  async updateDesignGeology(id: string, data: any): Promise<{ success: boolean }> {
     try {
+      console.log('🚀 [realAPI] updateDesignGeology 调用, id:', id, 'data:', data);
       const response = await put<BaseResponse>(`/api/v1/sjdz/${id}`, data);
+      console.log('🔍 [realAPI] updateDesignGeology 响应:', response);
       
       if (response.resultcode === 0 || response.resultcode === 200) {
         console.log('✅ [realAPI] updateDesignGeology 成功');
         return { success: true };
       } else {
         console.error('❌ [realAPI] updateDesignGeology 失败:', response.message);
-        return { success: false };
+        throw new Error(response.message || '更新失败');
       }
     } catch (error) {
       console.error('❌ [realAPI] updateDesignGeology 异常:', error);
-      return { success: false };
+      throw error;
     }
   }
 
@@ -2739,19 +2878,29 @@ class RealAPIService {
    * 从里程字符串中提取前缀 (如: "DK713+920" -> "DK")
    */
   private extractMileagePrefix(mileage: string): string {
-    const match = mileage.match(/^([A-Z]+)/);
+    // 匹配前缀，包括字母和数字（如 D1K, DK, YDK 等）
+    const match = mileage.match(/^([A-Za-z0-9]+?)(?=\d+\+)/);
     return match ? match[1] : 'DK';
   }
 
   /**
-   * 从里程字符串中提取数字 (如: "DK713+920" -> 713.920)
+   * 从里程字符串中提取里程数值
+   * 如: "DK180+973" -> 180973.00 (公里*1000 + 米，保留2位小数)
+   * 后端格式：dkilo = 180973.00 表示 180公里973米
    */
-  private extractMileageNumber(mileage: string): number {
-    const match = mileage.match(/([0-9]+)(?:\+([0-9]+))?/);
+  /**
+   * 从里程字符串中提取里程（米数）
+   * 如: "DK180+973.5" -> 180973.5 (180公里973.5米 = 180973.5米)
+   * 后端格式：dkilo/endMileage 都是米数，带2位小数
+   */
+  private extractMileageInMeters(mileage: string): number {
+    // 支持小数格式，如 DK18+972.03
+    const match = mileage.match(/(\d+)\+([\d.]+)$/);
     if (match) {
       const km = parseInt(match[1]) || 0;
-      const m = parseInt(match[2]) || 0;
-      return km + (m / 1000);
+      const m = parseFloat(match[2]) || 0;
+      // 返回米数：公里*1000 + 米，保留2位小数
+      return parseFloat((km * 1000 + m).toFixed(2));
     }
     return 0;
   }
@@ -2803,10 +2952,9 @@ class RealAPIService {
         return { records: [], total: 0, current: 1, size: 10, pages: 0 };
       }
       
-      const queryParams = {
+      const queryParams: any = {
         siteId: params.siteId,  // 必填，不使用默认值
         type: 1,                // 1=物探法
-        // submitFlag: 1,          // 必填，1=已提交
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };
@@ -2852,10 +3000,9 @@ class RealAPIService {
         return { records: [], total: 0, current: 1, size: 10, pages: 0 };
       }
       
-      const queryParams = {
+      const queryParams: any = {
         siteId: params.siteId,
         type: 2,  // 2=掌子面素描
-        // submitFlag: 1, // 必填
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };
@@ -2900,10 +3047,9 @@ class RealAPIService {
         return { records: [], total: 0, current: 1, size: 10, pages: 0 };
       }
       
-      const queryParams = {
+      const queryParams: any = {
         siteId: params.siteId,
         type: 3,  // 3=洞身素描
-        // submitFlag: 1, // 必填
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };
@@ -2951,7 +3097,6 @@ class RealAPIService {
       const queryParams = {
         siteId: params.siteId,
         type: 4,  // 4=钻探法
-        // submitFlag: 1, // 必填
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };
@@ -2999,7 +3144,6 @@ class RealAPIService {
       const queryParams = {
         siteId: params.siteId,
         type: 5,  // 5=地表补充
-        // submitFlag: 1, // 必填
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };
@@ -3039,14 +3183,29 @@ class RealAPIService {
    */
   async getSurfaceSupplementInfo(ybPk: string): Promise<any> {
     try {
+      console.log('🔍 [realAPI] getSurfaceSupplementInfo 请求, ybPk:', ybPk);
       const response = await get<any>(`/api/v1/dbbc/${ybPk}`);
+      console.log('🔍 [realAPI] getSurfaceSupplementInfo 响应:', response);
       
-      if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
-        return response.data;
+      // 兼容两种响应格式：
+      // 1. 直接返回数据对象 {ybPk, dbbcPk, ...}
+      // 2. 包装格式 {resultcode: 200, data: {...}}
+      if (response) {
+        // 如果响应直接包含ybPk或dbbcPk，说明是直接返回的数据
+        if (response.ybPk || response.dbbcPk) {
+          console.log('✅ [realAPI] getSurfaceSupplementInfo 直接返回数据');
+          return response;
+        }
+        // 如果是包装格式
+        if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
+          console.log('✅ [realAPI] getSurfaceSupplementInfo 包装格式返回');
+          return response.data;
+        }
       }
+      console.warn('⚠️ [realAPI] getSurfaceSupplementInfo 响应异常:', response);
       return null;
     } catch (error) {
-      console.error(' [realAPI] getSurfaceSupplementInfo ', error);
+      console.error('❌ [realAPI] getSurfaceSupplementInfo 异常:', error);
       return null;
     }
   }
@@ -3075,14 +3234,25 @@ class RealAPIService {
 
   /**
    * 获取洞身素描详情
+   * @param ybPk 预报主键
    */
-  async getTunnelSketchDetail(dssmPk: number): Promise<any> {
+  async getTunnelSketchDetail(ybPk: number): Promise<any> {
     try {
-      const response = await get<any>(`/api/v1/dssm/${dssmPk}`);
+      console.log('🔍 [realAPI] getTunnelSketchDetail 请求, ybPk:', ybPk);
+      const response = await get<any>(`/api/v1/dssm/${ybPk}`);
+      console.log('🔍 [realAPI] getTunnelSketchDetail 响应:', response);
       
-      if (response.resultcode === 200) {
-        return response.data;
+      // 处理响应格式
+      if (response && typeof response === 'object') {
+        if (response.resultcode === 200 && response.data) {
+          console.log('✅ [realAPI] getTunnelSketchDetail 成功, 数据:', response.data);
+          return response.data;
+        } else if (response.ybPk || response.dssmPk) {
+          // 直接返回数据对象
+          return response;
+        }
       }
+      console.warn('⚠️ [realAPI] getTunnelSketchDetail 无数据');
       return null;
     } catch (error) {
       console.error('❌ [realAPI] getTunnelSketchDetail 异常:', error);
@@ -3115,6 +3285,116 @@ class RealAPIService {
     } catch (error) {
       console.error('❌ [realAPI] getTspDetail 异常:', error);
       return null;
+    }
+  }
+
+  /**
+   * 获取水平声波剖面详情 (HSP)
+   */
+  async getHspDetail(ybPk: string): Promise<any> {
+    try {
+      const response = await get<any>(`/api/v1/wtf/hsp/${ybPk}`);
+      if ((response.resultcode === 200 || response.code === 200) && response.data) return response.data;
+      if (response.ybPk) return response;
+      return null;
+    } catch (error) {
+      console.error('❌ [realAPI] getHspDetail 异常:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取陆地声呐详情 (LDSN)
+   */
+  async getLdsnDetail(ybPk: string): Promise<any> {
+    try {
+      const response = await get<any>(`/api/v1/wtf/ldsn/${ybPk}`);
+      if ((response.resultcode === 200 || response.code === 200) && response.data) return response.data;
+      if (response.ybPk) return response;
+      return null;
+    } catch (error) {
+      console.error('❌ [realAPI] getLdsnDetail 异常:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取电磁波反射详情 (DCBFS)
+   */
+  async getDcbfsDetail(ybPk: string): Promise<any> {
+    try {
+      const response = await get<any>(`/api/v1/wtf/dcbfs/${ybPk}`);
+      if ((response.resultcode === 200 || response.code === 200) && response.data) return response.data;
+      if (response.ybPk) return response;
+      return null;
+    } catch (error) {
+      console.error('❌ [realAPI] getDcbfsDetail 异常:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取高分辨直流电详情 (GFBZLD)
+   */
+  async getGfbzldDetail(ybPk: string): Promise<any> {
+    try {
+      const response = await get<any>(`/api/v1/wtf/gfbzld/${ybPk}`);
+      if ((response.resultcode === 200 || response.code === 200) && response.data) return response.data;
+      if (response.ybPk) return response;
+      return null;
+    } catch (error) {
+      console.error('❌ [realAPI] getGfbzldDetail 异常:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取瞬变电磁详情 (SBDC)
+   */
+  async getSbdcDetail(ybPk: string): Promise<any> {
+    try {
+      const response = await get<any>(`/api/v1/wtf/sbdc/${ybPk}`);
+      if ((response.resultcode === 200 || response.code === 200) && response.data) return response.data;
+      if (response.ybPk) return response;
+      return null;
+    } catch (error) {
+      console.error('❌ [realAPI] getSbdcDetail 异常:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 获取微震监测详情 (WZJC)
+   */
+  async getWzjcDetail(ybPk: string): Promise<any> {
+    try {
+      const response = await get<any>(`/api/v1/wtf/wzjc/${ybPk}`);
+      if ((response.resultcode === 200 || response.code === 200) && response.data) return response.data;
+      if (response.ybPk) return response;
+      return null;
+    } catch (error) {
+      console.error('❌ [realAPI] getWzjcDetail 异常:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 根据方法代码获取物探法详情
+   * method: 1=TSP, 2=HSP, 3=LDSN, 4=DCBFS, 5=GFBZLD, 6=SBDC, 9=WZJC
+   */
+  async getGeophysicalDetailByMethod(method: number | string, ybPk: string): Promise<any> {
+    const m = typeof method === 'string' ? parseInt(method) : method;
+    switch (m) {
+      case 1: return this.getTspDetail(ybPk);
+      case 2: return this.getHspDetail(ybPk);
+      case 3: return this.getLdsnDetail(ybPk);
+      case 4: return this.getDcbfsDetail(ybPk);
+      case 5: return this.getGfbzldDetail(ybPk);
+      case 6: return this.getSbdcDetail(ybPk);
+      case 9: return this.getWzjcDetail(ybPk);
+      default:
+        console.warn('⚠️ [realAPI] 未知物探法方法代码:', method, '，ybPk:', ybPk);
+        return null;
     }
   }
 }

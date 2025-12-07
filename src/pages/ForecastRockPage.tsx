@@ -17,6 +17,10 @@ type RockGradeRecord = {
   rockGrade: string
   modifyReason?: string
   author?: string
+  bdPk?: number  // 标段主键（编辑时需要）
+  sdPk?: number  // 隧道主键（编辑时需要）
+  dkilo?: number // 原始里程值
+  edkilo?: number // 原始结束里程值
 }
 
 const { Row, Col } = Grid
@@ -59,7 +63,7 @@ function ForecastRockPage() {
   ]
 
   // 转换API数据为页面数据格式
-  const convertToRecord = (item: DesignRockGrade): RockGradeRecord => {
+  const convertToRecord = (item: any): RockGradeRecord => {
     const rockGradeMap: { [key: number]: string } = {
       1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI'
     }
@@ -67,13 +71,17 @@ function ForecastRockPage() {
     return {
       id: String(item.sjwydjPk),
       createdAt: item.gmtCreate,
-      siteId: String(item.sitePk),
+      siteId: item.siteId || String(item.sitePk) || '',
       mileagePrefix: item.dkname,
       startMileage: `${item.dkname}${Math.floor(item.dkilo)}+${Math.round((item.dkilo % 1) * 1000)}`,
       length: item.sjwydjLength,
       rockGrade: rockGradeMap[item.wydj] || 'IV',
       modifyReason: item.revise,
       author: item.username,
+      bdPk: item.bdPk,    // 保存标段主键
+      sdPk: item.sdPk,    // 保存隧道主键
+      dkilo: item.dkilo,  // 保存原始里程值
+      edkilo: item.edkilo, // 保存原始结束里程值
     }
   }
 
@@ -86,10 +94,10 @@ function ForecastRockPage() {
     }
     
     const params = {
+      siteId: siteId || '',
       pageNum: page,
       pageSize,
-      wydj: values.rockGrade ? rockGradeToNumber[values.rockGrade] : undefined,
-      sitePk: siteId ? parseInt(siteId) : undefined
+      wydj: values.rockGrade ? rockGradeToNumber[values.rockGrade] : undefined
     }
 
     setLoading(true)
@@ -182,27 +190,55 @@ function ForecastRockPage() {
         'I': 1, 'II': 2, 'III': 3, 'IV': 4, 'V': 5, 'VI': 6
       }
       
-      // 计算里程数字（公里 + 米/1000）
-      const dkilo = values.startMileageMain + (values.startMileageSub / 1000)
+      // 计算里程数字（米数）：公里*1000 + 米，带2位小数
+      // 如 D1K0+6 -> 0*1000 + 6 = 6.00
+      const startMileageSub = parseFloat(values.startMileageSub.toFixed(2))  // 确保米数带2位小数
+      const dkilo = parseFloat(((values.startMileageMain * 1000) + startMileageSub).toFixed(2))
+      // 计算结束里程 = 开始里程(米) + 预报长度(米)，带2位小数
+      const edkilo = parseFloat((dkilo + values.length).toFixed(2))
+      
+      // 编辑时优先使用表单值，如果为空则使用原始记录的值
+      const dkname = values.mileagePrefix || (editingRecord?.mileagePrefix) || 'DK'
+      
+      console.log('🔍 [设计围岩] 表单值:', values)
+      console.log('🔍 [设计围岩] 编辑记录:', editingRecord)
       
       // 按照API要求的格式构造数据
-      const submitData = {
+      // 编辑时直接传 SjwydjUpdateDTO，不需要包装在 sjwydj 里
+      const submitData = editingRecord ? {
+        // 更新时的数据格式
+        sjwydjPk: Number(editingRecord.id),  // 设计围岩等级主键（必填）
+        bdPk: editingRecord.bdPk || 1,  // 标段主键（必填）
+        sdPk: editingRecord.sdPk || 1,  // 隧道主键（必填）
+        dkname: dkname,
+        dkilo: dkilo,
+        endMileage: edkilo,
+        sjwydjLength: values.length,
+        wydj: rockGradeToNumber[values.rockGrade],
+        revise: values.modifyReason || editingRecord?.modifyReason || '无',
+      } : {
+        // 新增时的数据格式（包装在 sjwydj 里）
         sjwydj: {
-          siteId: siteId || '1',  // 使用当前 siteId
-          dkname: values.mileagePrefix,
+          siteId: siteId || '1',
+          dkname: dkname,
           dkilo: dkilo,
+          endMileage: edkilo,
           sjwydjLength: values.length,
           wydj: rockGradeToNumber[values.rockGrade],
-          revise: values.modifyReason || '',
-          username: values.author || localStorage.getItem('login') || 'admin'
+          revise: values.modifyReason || '无',
+          username: values.author || localStorage.getItem('login') || 'admin',
+          bdPk: 1,
+          sdPk: 1,
         }
       }
 
+      console.log('📤 [设计围岩] 提交数据:', submitData)
+
       if (editingRecord) {
-        await realAPI.updateDesignRockGrade(editingRecord.id, submitData)
+        await realAPI.updateDesignRockGrade(editingRecord.id, submitData as any)
         Message.success('更新成功')
       } else {
-        await realAPI.createDesignRockGrade(submitData)
+        await realAPI.createDesignRockGrade(submitData as any)
         Message.success('创建成功')
       }
 
@@ -219,25 +255,10 @@ function ForecastRockPage() {
 
   const columns = [
     {
-      title: '序号',
-      dataIndex: 'id',
-      width: 80,
-      render: (_: any, __: any, index: number) => (page - 1) * pageSize + index + 1,
-    },
-    {
-      title: '工点ID',
-      dataIndex: 'siteId',
-      width: 120,
-    },
-    {
-      title: '里程',
-      dataIndex: 'startMileage',
-      width: 150,
-    },
-    {
-      title: '长度(m)',
-      dataIndex: 'length',
-      width: 100,
+      title: '创建时间',
+      dataIndex: 'createdAt',
+      width: 180,
+      render: (val: string) => val ? val.replace('T', ' ').substring(0, 19) : '-',
     },
     {
       title: '围岩等级',
@@ -248,49 +269,79 @@ function ForecastRockPage() {
           color: ['I', 'II'].includes(rockGrade) ? '#00b42a' : 
                  ['III', 'IV'].includes(rockGrade) ? '#ff7d00' : '#f53f3f' 
         }}>
-          {rockGrade}级
+          {rockGrade}
         </span>
       ),
     },
     {
-      title: '修改原因',
-      dataIndex: 'modifyReason',
-      width: 200,
-      ellipsis: true,
+      title: '开始 - 结束里程',
+      dataIndex: 'mileageRange',
+      width: 280,
+      render: (_: any, record: RockGradeRecord) => {
+        const startKilo = record.startMileage || '';
+        // 计算结束里程
+        const dkname = record.mileagePrefix || 'D2K';
+        const startMatch = startKilo.match(/(\d+)\+(\d+\.?\d*)/);
+        if (startMatch && record.length) {
+          const startMain = parseInt(startMatch[1]);
+          const startSub = parseFloat(startMatch[2]);
+          const endSub = startSub + record.length;
+          const endMain = startMain + Math.floor(endSub / 1000);
+          const endSubFinal = endSub % 1000;
+          return `${dkname}${startMain}+${startSub.toFixed(2)} - ${dkname}${endMain}+${endSubFinal.toFixed(2)}`;
+        }
+        return startKilo;
+      },
     },
     {
-      title: '填写人',
-      dataIndex: 'author',
+      title: '预报长度',
+      dataIndex: 'length',
       width: 100,
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createdAt',
-      width: 180,
     },
     {
       title: '操作',
       dataIndex: 'operations',
-      width: 150,
+      width: 120,
       fixed: 'right' as const,
       render: (_: any, record: RockGradeRecord) => (
         <Space>
           <Button
             type="text"
             size="small"
-            icon={<IconEdit />}
+            style={{ padding: 4 }}
             onClick={() => handleEdit(record)}
           >
-            编辑
+            <span style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: 28, 
+              height: 28, 
+              borderRadius: 6,
+              backgroundColor: '#7c5cfc',
+              color: '#fff'
+            }}>
+              ✏️
+            </span>
           </Button>
           <Button
             type="text"
             size="small"
-            status="danger"
-            icon={<IconDelete />}
+            style={{ padding: 4 }}
             onClick={() => handleDelete(record.id)}
           >
-            删除
+            <span style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: 28, 
+              height: 28, 
+              borderRadius: 6,
+              backgroundColor: '#7c5cfc',
+              color: '#fff'
+            }}>
+              🗑️
+            </span>
           </Button>
         </Space>
       ),
@@ -520,8 +571,10 @@ function ForecastRockPage() {
           addForm.resetFields()
         }}
         style={{ width: 700 }}
+        okText="确定"
+        cancelText="取消"
       >
-        <Form form={addForm} layout="vertical">
+        <Form form={addForm} layout="horizontal" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
           {/* 围岩等级 */}
           <Form.Item
             label="围岩等级"
@@ -531,38 +584,41 @@ function ForecastRockPage() {
             <Select
               placeholder="请选择围岩等级"
               options={rockGradeOptions}
+              style={{ width: 200 }}
             />
           </Form.Item>
 
           {/* 里程冠号 和 开始里程 */}
-          <Row gutter={16}>
-            <Col span={8}>
+          <Row>
+            <Col span={12}>
               <Form.Item
                 label="里程冠号"
                 field="mileagePrefix"
                 rules={[{ required: true, message: '请输入里程冠号' }]}
-                initialValue="DK"
+                initialValue="D2K"
+                labelCol={{ span: 12 }}
+                wrapperCol={{ span: 12 }}
               >
-                <Input placeholder="DK" />
+                <Input placeholder="D2K" style={{ width: 100 }} />
               </Form.Item>
             </Col>
-            <Col span={16}>
-              <Form.Item label="开始里程" required>
-                <Space style={{ width: '100%', display: 'flex', alignItems: 'center' }}>
+            <Col span={12}>
+              <Form.Item label="开始里程" required labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
+                <Space>
                   <Form.Item 
                     field="startMileageMain" 
                     noStyle
                     rules={[{ required: true, message: '请输入' }]}
                   >
-                    <InputNumber placeholder="714" min={0} style={{ width: '140px' }} />
+                    <InputNumber placeholder="683" min={0} style={{ width: 80 }} />
                   </Form.Item>
-                  <span style={{ margin: '0 8px' }}>+</span>
+                  <span>+</span>
                   <Form.Item 
                     field="startMileageSub" 
                     noStyle
                     rules={[{ required: true, message: '请输入' }]}
                   >
-                    <InputNumber placeholder="430" min={0} max={999} style={{ width: '140px' }} />
+                    <InputNumber placeholder="925.00" min={0} step={0.01} precision={2} style={{ width: 100 }} />
                   </Form.Item>
                 </Space>
               </Form.Item>
@@ -570,14 +626,16 @@ function ForecastRockPage() {
           </Row>
 
           {/* 预报长度 和 填写人 */}
-          <Row gutter={16}>
+          <Row>
             <Col span={12}>
               <Form.Item
                 label="预报长度"
                 field="length"
                 rules={[{ required: true, message: '请输入预报长度' }]}
+                labelCol={{ span: 12 }}
+                wrapperCol={{ span: 12 }}
               >
-                <InputNumber placeholder="-480.00" style={{ width: '100%' }} step={0.01} />
+                <InputNumber placeholder="25.00" style={{ width: 100 }} step={0.01} />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -585,10 +643,14 @@ function ForecastRockPage() {
                 label="填写人"
                 field="author"
                 rules={[{ required: true, message: '请选择填写人' }]}
+                labelCol={{ span: 8 }}
+                wrapperCol={{ span: 16 }}
               >
                 <Select
                   placeholder="请选择填写人"
+                  style={{ width: 150 }}
                   options={[
+                    { label: '张永海', value: '张永海' },
                     { label: '冯文波', value: '冯文波' },
                     { label: '一分部', value: '一分部' },
                     { label: '二分部', value: '二分部' },
@@ -600,7 +662,7 @@ function ForecastRockPage() {
           </Row>
 
           {/* 修改原因说明 */}
-          <Form.Item label="修改原因说明" field="modifyReason">
+          <Form.Item label="修改原因说明" field="modifyReason" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
             <Input.TextArea
               placeholder="请输入修改原因"
               rows={3}

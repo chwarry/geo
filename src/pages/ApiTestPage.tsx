@@ -414,7 +414,7 @@ const ApiTestPage: React.FC = () => {
     const key = 'rockGrades';
     setTestLoading(key, true);
     try {
-      const data = await apiAdapter.getDesignRockGrades({ pageNum: 1, pageSize: 5 });
+      const data = await apiAdapter.getDesignRockGrades({ siteId: '307907', pageNum: 1, pageSize: 5 });
       
       addResult({
         method: 'GET',

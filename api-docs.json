@@ -21,14 +21,6 @@
             "description": "标段接口"
         },
         {
-            "name": "DownloadPlatformController",
-            "description": "平台数据下载统一接口"
-        },
-        {
-            "name": "FileController",
-            "description": "文件管理接口"
-        },
-        {
             "name": "SjwydjController",
             "description": "设计围岩等级相关接口"
         },
@@ -37,8 +29,20 @@
             "description": "地表补充相关接口"
         },
         {
+            "name": "AdminController",
+            "description": "管理员操作相关接口"
+        },
+        {
+            "name": "SyncController",
+            "description": "大平台数据同步相关接口"
+        },
+        {
             "name": "ZtfController",
             "description": "钻探法相关接口"
+        },
+        {
+            "name": "FileController",
+            "description": "文件下载接口"
         },
         {
             "name": "ZzmsmController",
@@ -81,7 +85,6 @@
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -107,20 +110,7 @@
                     "ZzmsmController"
                 ],
                 "summary": "更新掌子面素描数据",
-                "description": "成功时返回True",
                 "operationId": "updateZzmsm",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -149,13 +139,11 @@
                     "ZzmsmController"
                 ],
                 "summary": "删除掌子面素描数据",
-                "description": "成功时返回True",
                 "operationId": "deleteZzmsm",
                 "parameters": [
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -177,22 +165,144 @@
                 }
             }
         },
-        "/api/v1/ztf/jspk": {
+        "/api/v1/ztf/jspk/{ybPk}": {
+            "get": {
+                "tags": [
+                    "ZtfController"
+                ],
+                "summary": "获取钻探法加深炮孔详情数据",
+                "operationId": "getZtfJspkDetailVO",
+                "parameters": [
+                    {
+                        "name": "ybPk",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseJspkDetailVO"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "put": {
                 "tags": [
                     "ZtfController"
                 ],
                 "summary": "更新加深炮孔数据",
-                "description": "根据预报主键更新加深炮孔数据",
                 "operationId": "updateJspk",
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/JspkDTO"
+                "parameters": [
+                    {
+                        "name": "jspkDTO",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/JspkDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
+                                }
                             }
                         }
                     }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "ZtfController"
+                ],
+                "summary": "删除加深炮孔数据",
+                "operationId": "deleteJspk",
+                "parameters": [
+                    {
+                        "name": "ybPk",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ztf/cqspz/{ybPk}": {
+            "get": {
+                "tags": [
+                    "ZtfController"
+                ],
+                "summary": "获取超前水平钻详情数据",
+                "operationId": "getCqspzDetailVO",
+                "parameters": [
+                    {
+                        "name": "ybPk",
+                        "in": "path",
+                        "description": "预报主键",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseCqspzDetailVO"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "ZtfController"
+                ],
+                "summary": "更新超前水平钻详情数据",
+                "operationId": "updateCqspz",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CqspzDTO"
+                            }
+                        }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -207,29 +317,30 @@
                     }
                 }
             },
-            "post": {
+            "delete": {
                 "tags": [
                     "ZtfController"
                 ],
-                "summary": "新增加深炮孔数据",
-                "description": "创建新的加深炮孔数据",
-                "operationId": "createJspk",
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/JspkDTO"
-                            }
+                "summary": "删除超前水平钻详情数据",
+                "operationId": "deleteCqspz",
+                "parameters": [
+                    {
+                        "name": "ybPk",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
                         }
                     }
-                },
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseLong"
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
                                 }
                             }
                         }
@@ -248,13 +359,11 @@
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
                             "format": "int64"
-                        },
-                        "example": 1
+                        }
                     }
                 ],
                 "responses": {
@@ -275,20 +384,7 @@
                     "WtfController"
                 ],
                 "summary": "更新微震监测详情数据",
-                "description": "成功时返回True",
                 "operationId": "updateWzjc",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -317,13 +413,11 @@
                     "WtfController"
                 ],
                 "summary": "删除微震监测详情数据",
-                "description": "成功时返回True",
                 "operationId": "deleteWzjc",
                 "parameters": [
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -356,7 +450,6 @@
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -382,20 +475,7 @@
                     "WtfController"
                 ],
                 "summary": "更新地震波反射详情数据",
-                "description": "成功时返回True",
                 "operationId": "updateTsp",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -424,13 +504,11 @@
                     "WtfController"
                 ],
                 "summary": "删除地震波反射详情数据",
-                "description": "成功时返回True",
                 "operationId": "deleteTsp",
                 "parameters": [
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -463,7 +541,6 @@
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -489,20 +566,7 @@
                     "WtfController"
                 ],
                 "summary": "更新瞬变电磁法详情数据",
-                "description": "成功时返回True",
                 "operationId": "updateSbdc",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -531,13 +595,11 @@
                     "WtfController"
                 ],
                 "summary": "删除瞬变电磁法详情数据",
-                "description": "成功时返回True",
                 "operationId": "deleteSbdc",
                 "parameters": [
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -570,13 +632,11 @@
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
                             "format": "int64"
-                        },
-                        "example": 1
+                        }
                     }
                 ],
                 "responses": {
@@ -597,20 +657,7 @@
                     "WtfController"
                 ],
                 "summary": "更新陆地声呐详情数据",
-                "description": "成功时返回True",
                 "operationId": "updateLdsn",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -639,13 +686,11 @@
                     "WtfController"
                 ],
                 "summary": "删除陆地声呐详情数据",
-                "description": "成功时返回True",
                 "operationId": "deleteLdsn",
                 "parameters": [
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -678,7 +723,6 @@
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -704,20 +748,7 @@
                     "WtfController"
                 ],
                 "summary": "更新水平声波剖面详情数据",
-                "description": "成功时返回True",
                 "operationId": "updateHsp",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -746,13 +777,11 @@
                     "WtfController"
                 ],
                 "summary": "删除水平声波剖面详情数据",
-                "description": "成功时返回True",
                 "operationId": "deleteHsp",
                 "parameters": [
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -785,7 +814,6 @@
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -811,20 +839,7 @@
                     "WtfController"
                 ],
                 "summary": "更新高分辨直流电法详情数据",
-                "description": "成功时返回True",
                 "operationId": "updateGfbzld",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -853,13 +868,11 @@
                     "WtfController"
                 ],
                 "summary": "删除高分辨直流电法详情数据",
-                "description": "成功时返回True",
                 "operationId": "deleteGfbzld",
                 "parameters": [
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -892,7 +905,6 @@
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -918,20 +930,7 @@
                     "WtfController"
                 ],
                 "summary": "更新电磁波反射详情数据",
-                "description": "成功时返回True",
                 "operationId": "updateDcbfs",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -960,13 +959,11 @@
                     "WtfController"
                 ],
                 "summary": "删除电磁波反射详情数据",
-                "description": "成功时返回True",
                 "operationId": "deleteDcbfs",
                 "parameters": [
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -994,19 +991,16 @@
                     "SjybController"
                 ],
                 "summary": "获取设计预报方法详情",
-                "description": "根据设计预报主键获取详细信息",
                 "operationId": "getSjyb",
                 "parameters": [
                     {
                         "name": "sjybPk",
                         "in": "path",
-                        "description": "设计预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
                             "format": "int64"
-                        },
-                        "example": 1
+                        }
                     }
                 ],
                 "responses": {
@@ -1027,21 +1021,7 @@
                     "SjybController"
                 ],
                 "summary": "更新设计预报方法",
-                "description": "根据设计预报主键更新数据",
                 "operationId": "updateSjyb",
-                "parameters": [
-                    {
-                        "name": "sjybPk",
-                        "in": "path",
-                        "description": "设计预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "example": 1
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -1058,7 +1038,37 @@
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseString"
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "SjybController"
+                ],
+                "summary": "删除设计预报方法",
+                "operationId": "deleteSjyb",
+                "parameters": [
+                    {
+                        "name": "sjybPk",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
                                 }
                             }
                         }
@@ -1072,19 +1082,16 @@
                     "SjwydjController"
                 ],
                 "summary": "获取设计围岩等级详情",
-                "description": "根据设计围岩等级主键获取详细信息",
                 "operationId": "getSjwydj",
                 "parameters": [
                     {
                         "name": "sjwydjPk",
                         "in": "path",
-                        "description": "设计围岩等级主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
                             "format": "int64"
-                        },
-                        "example": 1
+                        }
                     }
                 ],
                 "responses": {
@@ -1105,26 +1112,12 @@
                     "SjwydjController"
                 ],
                 "summary": "更新设计围岩等级",
-                "description": "根据设计围岩等级主键更新数据",
                 "operationId": "updateSjwydj",
-                "parameters": [
-                    {
-                        "name": "sjwydjPk",
-                        "in": "path",
-                        "description": "设计围岩等级主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "example": 1
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SjwydjDetailVO"
+                                "$ref": "#/components/schemas/SjwydjUpdateDTO"
                             }
                         }
                     },
@@ -1136,7 +1129,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseString"
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
                                 }
                             }
                         }
@@ -1148,19 +1141,16 @@
                     "SjwydjController"
                 ],
                 "summary": "删除设计围岩等级",
-                "description": "根据设计围岩等级主键删除数据",
                 "operationId": "deleteSjwydj",
                 "parameters": [
                     {
                         "name": "sjwydjPk",
                         "in": "path",
-                        "description": "设计围岩等级主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
                             "format": "int64"
-                        },
-                        "example": 1
+                        }
                     }
                 ],
                 "responses": {
@@ -1169,7 +1159,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseString"
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
                                 }
                             }
                         }
@@ -1183,19 +1173,16 @@
                     "SjdzController"
                 ],
                 "summary": "获取设计地质信息详情",
-                "description": "根据设计地质主键获取详细信息",
                 "operationId": "getSjdz",
                 "parameters": [
                     {
                         "name": "sjdzPk",
                         "in": "path",
-                        "description": "设计地质主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
                             "format": "int64"
-                        },
-                        "example": 1
+                        }
                     }
                 ],
                 "responses": {
@@ -1216,26 +1203,12 @@
                     "SjdzController"
                 ],
                 "summary": "更新设计地质信息",
-                "description": "根据设计地质主键更新数据",
                 "operationId": "updateSjdz",
-                "parameters": [
-                    {
-                        "name": "sjdzPk",
-                        "in": "path",
-                        "description": "设计地质主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "example": 1
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SjdzDetailVO"
+                                "$ref": "#/components/schemas/SjdzUpdateDTO"
                             }
                         }
                     },
@@ -1247,7 +1220,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseString"
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
                                 }
                             }
                         }
@@ -1259,19 +1232,16 @@
                     "SjdzController"
                 ],
                 "summary": "删除设计地质信息",
-                "description": "根据设计地质主键删除数据",
                 "operationId": "deleteSjdz",
                 "parameters": [
                     {
                         "name": "sjdzPk",
                         "in": "path",
-                        "description": "设计地质主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
                             "format": "int64"
-                        },
-                        "example": 1
+                        }
                     }
                 ],
                 "responses": {
@@ -1280,7 +1250,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseString"
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
                                 }
                             }
                         }
@@ -1299,7 +1269,6 @@
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -1325,20 +1294,7 @@
                     "DssmController"
                 ],
                 "summary": "更新洞身素描详情数据",
-                "description": "成功时返回True",
                 "operationId": "updateDssm",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    }
-                ],
                 "requestBody": {
                     "content": {
                         "application/json": {
@@ -1367,13 +1323,11 @@
                     "DssmController"
                 ],
                 "summary": "删除洞身素描详情数据",
-                "description": "成功时返回True",
                 "operationId": "deleteDssm",
                 "parameters": [
                     {
                         "name": "ybPk",
                         "in": "path",
-                        "description": "预报主键",
                         "required": true,
                         "schema": {
                             "type": "integer",
@@ -1395,23 +1349,53 @@
                 }
             }
         },
-        "/api/v1/dbbc": {
+        "/api/v1/dbbc/{ybPk}": {
+            "get": {
+                "tags": [
+                    "DbbcController"
+                ],
+                "summary": "获取地表补充详情数据",
+                "operationId": "getDbbc",
+                "parameters": [
+                    {
+                        "name": "ybPk",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseDbbcDetailVO"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "put": {
                 "tags": [
                     "DbbcController"
                 ],
                 "summary": "更新地表补充数据",
-                "description": "根据预报主键更新数据",
                 "operationId": "updateDbbc",
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/DbbcDTO"
-                            }
+                "parameters": [
+                    {
+                        "name": "dbbcDTO",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/DbbcDTO"
                         }
                     }
-                },
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1425,29 +1409,101 @@
                     }
                 }
             },
-            "post": {
+            "delete": {
                 "tags": [
                     "DbbcController"
                 ],
-                "summary": "新增地表补充数据",
-                "description": "创建新的地表补充调查数据",
-                "operationId": "createDbbc",
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/DbbcDTO"
-                            }
+                "summary": "删除地表补充数据",
+                "operationId": "deleteDbbc",
+                "parameters": [
+                    {
+                        "name": "ybPk",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
                         }
                     }
-                },
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseLong"
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/role/{userPk}": {
+            "get": {
+                "tags": [
+                    "AdminController"
+                ],
+                "summary": "获取某个用户的角色信息",
+                "operationId": "getRole",
+                "parameters": [
+                    {
+                        "name": "userPk",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseListRole"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "AdminController"
+                ],
+                "summary": "更新某个用户的角色",
+                "operationId": "updateRole",
+                "parameters": [
+                    {
+                        "name": "userPk",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    },
+                    {
+                        "name": "rolePk",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
                                 }
                             }
                         }
@@ -1461,7 +1517,6 @@
                     "ZzmsmController"
                 ],
                 "summary": "新增掌子面素描数据",
-                "description": "成功时返回预报主键ybPk,失败时返回失败码",
                 "operationId": "createZzmsm",
                 "requestBody": {
                     "content": {
@@ -1487,13 +1542,12 @@
                 }
             }
         },
-        "/api/v1/zzmsm/file": {
+        "/api/v1/zzmsm/{ybPk}/file": {
             "post": {
                 "tags": [
                     "ZzmsmController"
                 ],
                 "summary": "上传掌子面素描文件",
-                "description": "成功时返回True",
                 "operationId": "uploadFileZzmsm",
                 "parameters": [
                     {
@@ -1519,23 +1573,239 @@
                 }
             }
         },
-        "/api/v1/ztf/jspk/upload": {
+        "/api/v1/ztf/jspk": {
+            "post": {
+                "tags": [
+                    "ZtfController"
+                ],
+                "summary": "新增加深炮孔数据",
+                "operationId": "createJspk",
+                "parameters": [
+                    {
+                        "name": "jspkDTO",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/JspkDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseLong"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ztf/jspk/{ybPk}/file": {
             "post": {
                 "tags": [
                     "ZtfController"
                 ],
                 "summary": "上传加深炮孔文件",
-                "description": "上传加深炮孔相关文件",
                 "operationId": "uploadFileJspk",
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/JspkFileDTO"
+                "parameters": [
+                    {
+                        "name": "fileDTO",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/JspkFileDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
+                                }
                             }
                         }
                     }
+                }
+            }
+        },
+        "/api/v1/ztf/cqspz": {
+            "post": {
+                "tags": [
+                    "ZtfController"
+                ],
+                "summary": "新增超前水平钻详情数据",
+                "operationId": "createCqspz",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CqspzDTO"
+                            }
+                        }
+                    },
+                    "required": true
                 },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseLong"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ztf/cqspz/{ybPk}/file": {
+            "post": {
+                "tags": [
+                    "ZtfController"
+                ],
+                "summary": "上传超前水平钻文件",
+                "operationId": "uploadFileCqspz",
+                "parameters": [
+                    {
+                        "name": "cqspzFileDTO",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/CqspzFileDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/zhjl": {
+            "post": {
+                "tags": [
+                    "ZhjlController"
+                ],
+                "summary": "新增综合结论数据",
+                "operationId": "createZhjl",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ZhjlCreateDTO"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseLong"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/zhjl/{zhjlPk}/zhjlCzinfo": {
+            "get": {
+                "tags": [
+                    "ZhjlController"
+                ],
+                "summary": "获取综合结论处置情况数据",
+                "operationId": "getZhjlCzinfoVO",
+                "parameters": [
+                    {
+                        "name": "zhjlPk",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseListZhjlCzinfoVO"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "ZhjlController"
+                ],
+                "summary": "新增综合结论处置数据",
+                "operationId": "createZhjlCzinfo",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ZhjlCzinfoCreateDTO"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseLong"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/zhjl/{zhjlPk}/file": {
+            "post": {
+                "tags": [
+                    "ZhjlController"
+                ],
+                "summary": "上传综合结论文件",
+                "operationId": "uploadFileZhjl",
+                "parameters": [
+                    {
+                        "name": "zhjlFileDTO",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/ZhjlFileDTO"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1556,7 +1826,6 @@
                     "WtfController"
                 ],
                 "summary": "新增微震监测详情数据",
-                "description": "成功时返回True,失败时返回失败码",
                 "operationId": "createWzjc",
                 "requestBody": {
                     "content": {
@@ -1582,13 +1851,12 @@
                 }
             }
         },
-        "/api/v1/wtf/wzjc/file": {
+        "/api/v1/wtf/wzjc/{ybPk}/file": {
             "post": {
                 "tags": [
                     "WtfController"
                 ],
                 "summary": "上传微震监测文件",
-                "description": "成功时返回True",
                 "operationId": "uploadFileWzjc",
                 "parameters": [
                     {
@@ -1620,7 +1888,6 @@
                     "WtfController"
                 ],
                 "summary": "新增地震波反射详情数据",
-                "description": "成功时返回预报主键ybPk,失败时返回失败码",
                 "operationId": "createTsp",
                 "requestBody": {
                     "content": {
@@ -1646,13 +1913,12 @@
                 }
             }
         },
-        "/api/v1/wtf/tsp/file": {
+        "/api/v1/wtf/tsp/{ybPk}/file": {
             "post": {
                 "tags": [
                     "WtfController"
                 ],
                 "summary": "上传地震波反射文件",
-                "description": "成功时返回True",
                 "operationId": "uploadFileTsp",
                 "parameters": [
                     {
@@ -1684,7 +1950,6 @@
                     "WtfController"
                 ],
                 "summary": "新增瞬变电磁法详情数据",
-                "description": "成功时返回预报主键ybPk,失败时返回失败码",
                 "operationId": "createSbdc",
                 "requestBody": {
                     "content": {
@@ -1710,13 +1975,12 @@
                 }
             }
         },
-        "/api/v1/wtf/sbdc/file": {
+        "/api/v1/wtf/sbdc/{ybPk}/file": {
             "post": {
                 "tags": [
                     "WtfController"
                 ],
                 "summary": "上传瞬变电磁法文件",
-                "description": "成功时返回True",
                 "operationId": "uploadFileSbdc",
                 "parameters": [
                     {
@@ -1748,7 +2012,6 @@
                     "WtfController"
                 ],
                 "summary": "新增陆地声呐详情数据",
-                "description": "成功时返回预报主键ybPk,失败时返回失败码",
                 "operationId": "createLdsn",
                 "requestBody": {
                     "content": {
@@ -1774,13 +2037,12 @@
                 }
             }
         },
-        "/api/v1/wtf/ldsn/file": {
+        "/api/v1/wtf/ldsn/{ybPk}/file": {
             "post": {
                 "tags": [
                     "WtfController"
                 ],
                 "summary": "上传陆地声呐文件",
-                "description": "成功时返回True",
                 "operationId": "uploadFileLdsn",
                 "parameters": [
                     {
@@ -1812,7 +2074,6 @@
                     "WtfController"
                 ],
                 "summary": "新增水平声波剖面详情数据",
-                "description": "成功时返回预报主键ybPk,失败时返回失败码",
                 "operationId": "createHsp",
                 "requestBody": {
                     "content": {
@@ -1838,13 +2099,12 @@
                 }
             }
         },
-        "/api/v1/wtf/hsp/file": {
+        "/api/v1/wtf/hsp/{ybPk}/file": {
             "post": {
                 "tags": [
                     "WtfController"
                 ],
                 "summary": "上传水平声波剖面文件",
-                "description": "成功时返回True",
                 "operationId": "uploadFileHsp",
                 "parameters": [
                     {
@@ -1876,7 +2136,6 @@
                     "WtfController"
                 ],
                 "summary": "新增高分辨直流电法详情数据",
-                "description": "成功时返回预报主键ybPk,失败时返回失败码",
                 "operationId": "createGfbzld",
                 "requestBody": {
                     "content": {
@@ -1902,13 +2161,12 @@
                 }
             }
         },
-        "/api/v1/wtf/gfbzld/file": {
+        "/api/v1/wtf/gfbzld/{ybPk}/file": {
             "post": {
                 "tags": [
                     "WtfController"
                 ],
                 "summary": "上传高分辨直流电法文件",
-                "description": "成功时返回True",
                 "operationId": "uploadFileGfbzld",
                 "parameters": [
                     {
@@ -1940,7 +2198,6 @@
                     "WtfController"
                 ],
                 "summary": "新增电磁波反射详情数据",
-                "description": "成功时返回预报主键ybPk,失败时返回失败码",
                 "operationId": "createDcbfs",
                 "requestBody": {
                     "content": {
@@ -1966,13 +2223,12 @@
                 }
             }
         },
-        "/api/v1/wtf/dcbfs/file": {
+        "/api/v1/wtf/dcbfs/{ybPk}/file": {
             "post": {
                 "tags": [
                     "WtfController"
                 ],
                 "summary": "上传电磁波反射文件",
-                "description": "成功时返回True",
                 "operationId": "uploadFileDcbfs",
                 "parameters": [
                     {
@@ -2004,7 +2260,6 @@
                     "SjybController"
                 ],
                 "summary": "新增设计预报方法",
-                "description": "创建新的设计预报方法数据",
                 "operationId": "createSjyb",
                 "requestBody": {
                     "content": {
@@ -2036,13 +2291,12 @@
                     "SjwydjController"
                 ],
                 "summary": "新增设计围岩等级",
-                "description": "创建新的设计�岩等级数据",
                 "operationId": "createSjwydj",
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SjwydjDetailVO"
+                                "$ref": "#/components/schemas/SjwydjCreateDTO"
                             }
                         }
                     },
@@ -2068,13 +2322,12 @@
                     "SjdzController"
                 ],
                 "summary": "新增设计地质信息",
-                "description": "创建新的设计地质信息数据",
                 "operationId": "createSjdz",
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SjdzDetailVO"
+                                "$ref": "#/components/schemas/SjdzCreateDTO"
                             }
                         }
                     },
@@ -2100,7 +2353,6 @@
                     "DssmController"
                 ],
                 "summary": "新增洞身素描详情数据",
-                "description": "成功时返回预报主键ybPk,失败时返回失败码",
                 "operationId": "createDssm",
                 "requestBody": {
                     "content": {
@@ -2126,13 +2378,12 @@
                 }
             }
         },
-        "/api/v1/dssm/file": {
+        "/api/v1/dssm/{ybPk}/file": {
             "post": {
                 "tags": [
                     "DssmController"
                 ],
                 "summary": "上传洞身素描文件",
-                "description": "成功时返回True",
                 "operationId": "uploadFileDssm",
                 "parameters": [
                     {
@@ -2158,23 +2409,54 @@
                 }
             }
         },
-        "/api/v1/dbbc/upload": {
+        "/api/v1/dbbc": {
+            "post": {
+                "tags": [
+                    "DbbcController"
+                ],
+                "summary": "新增地表补充数据",
+                "operationId": "createDbbc",
+                "parameters": [
+                    {
+                        "name": "dbbcDTO",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/DbbcDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseLong"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/dbbc/{ybPk}/file": {
             "post": {
                 "tags": [
                     "DbbcController"
                 ],
                 "summary": "上传地表补充文件",
-                "description": "上传地表补充相关文件",
                 "operationId": "uploadFileDbbc",
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/DbbcFileDTO"
-                            }
+                "parameters": [
+                    {
+                        "name": "fileDTO",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/DbbcFileDTO"
                         }
                     }
-                },
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2189,24 +2471,32 @@
                 }
             }
         },
-        "/api/auth/reset-password": {
+        "/api/sync/bd-xm": {
             "post": {
                 "tags": [
-                    "认证接口"
+                    "SyncController"
                 ],
-                "summary": "重置密码",
-                "description": "管理员重置用户密码",
-                "operationId": "resetPassword",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ResetPasswordRequest"
-                            }
+                "operationId": "syncBdAndGd",
+                "parameters": [
+                    {
+                        "name": "startTime",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
                         }
                     },
-                    "required": true
-                },
+                    {
+                        "name": "endTime",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -2307,19 +2597,105 @@
                 }
             }
         },
-        "/test/hello": {
+        "/api/admin/user/{userPk}/bd-gd/permission": {
             "get": {
                 "tags": [
-                    "test-controller"
+                    "AdminController"
                 ],
-                "operationId": "hello",
+                "summary": "获取某个用户标段-工点所有权限",
+                "operationId": "getBdAndGdPermissionByUserPk",
+                "parameters": [
+                    {
+                        "name": "userPk",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseString"
+                                    "$ref": "#/components/schemas/BaseResponseListUserResourcePermission"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "AdminController"
+                ],
+                "summary": "更新某个用户标段-工点权限",
+                "operationId": "updateBdAndGdPermissionByUserPk",
+                "parameters": [
+                    {
+                        "name": "userPk",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/UserResourcePermissionDTO"
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/user/reset-password": {
+            "post": {
+                "tags": [
+                    "AdminController"
+                ],
+                "summary": "管理员重置用户至初始密码",
+                "operationId": "resetPassword",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResetPasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponseBoolean"
                                 }
                             }
                         }
@@ -2391,183 +2767,21 @@
                 }
             }
         },
-        "/api/v1/ztf/jspk/{ybPk}": {
-            "get": {
-                "tags": [
-                    "ZtfController"
-                ],
-                "summary": "获取钻探法加深炮孔详情数据",
-                "operationId": "getZtfJspkDetailVO",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "example": 1
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseJspkDetailVO"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "tags": [
-                    "ZtfController"
-                ],
-                "summary": "删除加深炮孔数据",
-                "description": "根据预报主键删除加深炮孔数据",
-                "operationId": "deleteJspk",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "example": 1
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseBoolean"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/ztf/cqspz/{ybPk}": {
-            "get": {
-                "tags": [
-                    "ZtfController"
-                ],
-                "summary": "获取钻探法超前水平钻详情数据",
-                "operationId": "getZtfCqspzDetailVO",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "example": 1
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseCqspzDetailVO"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/zhjl/list": {
             "get": {
                 "tags": [
                     "ZhjlController"
                 ],
-                "summary": "获取综合结论列表",
-                "description": "根据用户ID分页获取综合结论数据，支持处置状态和时间范围筛选",
-                "operationId": "getZhjllist",
+                "summary": "获取综合结论展示分页数据",
+                "operationId": "getZhjlVOPage",
                 "parameters": [
                     {
-                        "name": "userid",
+                        "name": "queryDTO",
                         "in": "query",
-                        "description": "用户ID",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "example": 1
-                    },
-                    {
-                        "name": "pageNum",
-                        "in": "query",
-                        "description": "页码，默认1",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32",
-                            "default": 1
-                        },
-                        "example": 1
-                    },
-                    {
-                        "name": "pageSize",
-                        "in": "query",
-                        "description": "每页数量，默认15",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32",
-                            "default": 15
-                        },
-                        "example": 15
-                    },
-                    {
-                        "name": "warndealflag",
-                        "in": "query",
-                        "description": "处置状态(0:未处置;1:已处置)",
-                        "required": false,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32"
-                        },
-                        "example": 0
-                    },
-                    {
-                        "name": "begin",
-                        "in": "query",
-                        "description": "开始时间",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "format": "date-time"
-                        },
-                        "example": "2024-01-01T00:00:00"
-                    },
-                    {
-                        "name": "end",
-                        "in": "query",
-                        "description": "结束时间",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "format": "date-time"
-                        },
-                        "example": "2024-12-31T23:59:59"
+                            "$ref": "#/components/schemas/ZhjlPageQueryDTO"
+                        }
                     }
                 ],
                 "responses": {
@@ -2576,7 +2790,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseZhjlPageVO"
+                                    "$ref": "#/components/schemas/BaseResponsePageZhjlInfoVO"
                                 }
                             }
                         }
@@ -2622,7 +2836,6 @@
                     "SjybController"
                 ],
                 "summary": "获取设计预报方法列表",
-                "description": "根据用户ID分页获取设计预报方法数据，支持预报方法和时间范围筛选",
                 "operationId": "getSjybList",
                 "parameters": [
                     {
@@ -2713,17 +2926,15 @@
                     "SjwydjController"
                 ],
                 "summary": "获取设计围岩等级列表",
-                "description": "根据用户ID分页获取设计围岩等级数据，支持围岩等级和时间范围筛选",
                 "operationId": "getSjwydjList",
                 "parameters": [
                     {
-                        "name": "userid",
+                        "name": "siteId",
                         "in": "query",
-                        "description": "用户ID",
+                        "description": "工点ID",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
+                            "type": "string"
                         },
                         "example": 1
                     },
@@ -2754,7 +2965,7 @@
                     {
                         "name": "wydj",
                         "in": "query",
-                        "description": "围岩等级",
+                        "description": "围岩等级(1-6)",
                         "required": false,
                         "schema": {
                             "type": "integer",
@@ -2805,17 +3016,15 @@
                     "SjdzController"
                 ],
                 "summary": "获取设计地质信息列表",
-                "description": "根据用户ID分页获取设计地质信息数据，支持影响因素和时间范围筛选",
                 "operationId": "getSjdzList",
                 "parameters": [
                     {
-                        "name": "userid",
+                        "name": "siteId",
                         "in": "query",
-                        "description": "用户ID",
+                        "description": "工点ID",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
+                            "type": "string"
                         },
                         "example": 1
                     },
@@ -2891,432 +3100,21 @@
                 }
             }
         },
-        "/api/v1/platform/download/zzmkilo": {
-            "get": {
-                "tags": [
-                    "DownloadPlatformController"
-                ],
-                "summary": "下载掌子面信息",
-                "description": "DownZzmkilo",
-                "operationId": "downZzmkilo",
-                "parameters": [
-                    {
-                        "name": "siteID",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "sitecode",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseZzmkiloDTO"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/platform/download/warn-info": {
-            "get": {
-                "tags": [
-                    "DownloadPlatformController"
-                ],
-                "summary": "下载综合结论信息",
-                "description": "DownWarnInfo",
-                "operationId": "downWarnInfo",
-                "parameters": [
-                    {
-                        "name": "startdate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "enddate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "siteID",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    },
-                    {
-                        "name": "warngrade",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    },
-                    {
-                        "name": "warndealflag",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseListWarnInfoDTO"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/platform/download/warn-deal": {
-            "get": {
-                "tags": [
-                    "DownloadPlatformController"
-                ],
-                "summary": "下载延误处置信息",
-                "description": "DownWarnDealInfo",
-                "operationId": "downWarnDealInfo",
-                "parameters": [
-                    {
-                        "name": "startdate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "enddate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "siteID",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "sitecode",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseListWarnDealInfoDTO"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/platform/download/sjyb": {
-            "get": {
-                "tags": [
-                    "DownloadPlatformController"
-                ],
-                "summary": "下载预报方法设计信息",
-                "description": "DownSjybInfo",
-                "operationId": "downSjybInfo",
-                "parameters": [
-                    {
-                        "name": "startdate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "enddate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "siteID",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    },
-                    {
-                        "name": "method",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseListSjybInfoDTO"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/platform/download/sjwy": {
-            "get": {
-                "tags": [
-                    "DownloadPlatformController"
-                ],
-                "summary": "下载设计围岩等级信息",
-                "description": "DownSjwyInfo",
-                "operationId": "downSjwyInfo",
-                "parameters": [
-                    {
-                        "name": "startdate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "enddate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "siteID",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseListSjwyInfoDTO"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/platform/download/near": {
-            "get": {
-                "tags": [
-                    "DownloadPlatformController"
-                ],
-                "summary": "下载临近延误信息",
-                "description": "DownNearInfo",
-                "operationId": "downNearInfo",
-                "parameters": [
-                    {
-                        "name": "startdate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "enddate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "siteID",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    },
-                    {
-                        "name": "method",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseListNearInfoDTO"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/platform/download/geology": {
-            "get": {
-                "tags": [
-                    "DownloadPlatformController"
-                ],
-                "summary": "下载设计地质信息",
-                "description": "DownGeologyInfo",
-                "operationId": "downGeologyInfo",
-                "parameters": [
-                    {
-                        "name": "startdate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "enddate",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "siteID",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    },
-                    {
-                        "name": "method",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int32"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseListGeologyInfoDTO"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/file/{siteId}/{fileType}/{ybPk}/{fileName}": {
+        "/api/v1/file": {
             "get": {
                 "tags": [
                     "FileController"
                 ],
                 "summary": "下载文件",
-                "description": "根据站点ID、文件类型、预报主键和文件名下载文件",
+                "description": "根据工点Id,文件名下载文件",
                 "operationId": "downloadFile",
                 "parameters": [
                     {
-                        "name": "siteId",
-                        "in": "path",
+                        "name": "query",
+                        "in": "query",
                         "required": true,
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "fileType",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        }
-                    },
-                    {
-                        "name": "fileName",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
+                            "$ref": "#/components/schemas/DownloadFileQueryDTO"
                         }
                     }
                 ],
@@ -3367,73 +3165,6 @@
                 }
             }
         },
-        "/api/v1/dbbc/{ybPk}": {
-            "get": {
-                "tags": [
-                    "DbbcController"
-                ],
-                "summary": "获取地表补充详情数据",
-                "operationId": "getDbbc",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "example": 1
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseDbbcDetailVO"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "tags": [
-                    "DbbcController"
-                ],
-                "summary": "删除地表补充数据",
-                "description": "根据预报主键删除数据",
-                "operationId": "deleteDbbc",
-                "parameters": [
-                    {
-                        "name": "ybPk",
-                        "in": "path",
-                        "description": "预报主键",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "example": 1
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseBoolean"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/api/v1/dbbc/list": {
             "get": {
                 "tags": [
@@ -3471,8 +3202,7 @@
                 "tags": [
                     "BdController"
                 ],
-                "summary": "下载用户已授权标段",
-                "description": "DownBdAndXmInfo",
+                "summary": "获取用户已授权标段",
                 "operationId": "getBdAndXm",
                 "responses": {
                     "200": {
@@ -3493,8 +3223,7 @@
                 "tags": [
                     "BdController"
                 ],
-                "summary": "下载用户已授权标段和工点信息",
-                "description": "DownBdAndGdInfo1",
+                "summary": "获取用户已授权标段和工点信息",
                 "operationId": "getBdAndGd",
                 "parameters": [
                     {
@@ -3502,8 +3231,7 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
+                            "type": "string"
                         }
                     }
                 ],
@@ -3521,25 +3249,21 @@
                 }
             }
         },
-        "/api/v1/zhjl/{zhjlPk}": {
-            "delete": {
+        "/api/admin/user/list": {
+            "get": {
                 "tags": [
-                    "ZhjlController"
+                    "AdminController"
                 ],
-                "summary": "删除综合结论数据",
-                "description": "根据综合结论主键删除数据",
-                "operationId": "deleteZhjl",
+                "summary": "获取用户分页信息",
+                "operationId": "listUser",
                 "parameters": [
                     {
-                        "name": "zhjlPk",
-                        "in": "path",
-                        "description": "综合结论主键",
+                        "name": "query",
+                        "in": "query",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
-                        },
-                        "example": 1
+                            "$ref": "#/components/schemas/BasePageQueryDTO"
+                        }
                     }
                 ],
                 "responses": {
@@ -3548,7 +3272,7 @@
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseString"
+                                    "$ref": "#/components/schemas/BaseResponsePageUser"
                                 }
                             }
                         }
@@ -3556,24 +3280,21 @@
                 }
             }
         },
-        "/api/v1/sjyb/{sjybPkStr}": {
-            "delete": {
+        "/api/admin/role/list": {
+            "get": {
                 "tags": [
-                    "SjybController"
+                    "AdminController"
                 ],
-                "summary": "删除设计预报方法",
-                "description": "根据设计预报主键删除数据",
-                "operationId": "deleteSjyb",
+                "summary": "获取角色列表分页信息",
+                "operationId": "listRole",
                 "parameters": [
                     {
-                        "name": "sjybPkStr",
-                        "in": "path",
-                        "description": "设计预报主键",
+                        "name": "query",
+                        "in": "query",
                         "required": true,
                         "schema": {
-                            "type": "string"
-                        },
-                        "example": "1,2,3"
+                            "$ref": "#/components/schemas/BasePageQueryDTO"
+                        }
                     }
                 ],
                 "responses": {
@@ -3582,7 +3303,69 @@
                         "content": {
                             "*/*": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseString"
+                                    "$ref": "#/components/schemas/BaseResponsePageRole"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/gd/list": {
+            "get": {
+                "tags": [
+                    "AdminController"
+                ],
+                "summary": "获取工点分页信息",
+                "operationId": "listGd",
+                "parameters": [
+                    {
+                        "name": "query",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/BasePageQueryDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponsePageSite"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/bd-gd/list": {
+            "get": {
+                "tags": [
+                    "AdminController"
+                ],
+                "summary": "获取标段和工点分页信息",
+                "operationId": "listBdAndGd",
+                "parameters": [
+                    {
+                        "name": "query",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/components/schemas/BasePageQueryDTO"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "*/*": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BaseResponsePageBdAndGdVO"
                                 }
                             }
                         }
@@ -3953,7 +3736,7 @@
                     },
                     "jp": {
                         "type": "string",
-                        "description": "级配:当soilname=3(砂土)、4(粗粒土)时必填,其他情��可为空",
+                        "description": "级配:当soilname=3(砂土)、4(粗粒土)时必填,其他情况可为空",
                         "example": "良好"
                     },
                     "md": {
@@ -4231,6 +4014,364 @@
                 },
                 "description": "加深炮孔数据DTO"
             },
+            "CqspzDTO": {
+                "type": "object",
+                "properties": {
+                    "ybPk": {
+                        "type": "integer",
+                        "description": "预报分段信息ID",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "ybId": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "siteId": {
+                        "type": "string"
+                    },
+                    "dkname": {
+                        "type": "string"
+                    },
+                    "dkilo": {
+                        "type": "number"
+                    },
+                    "ybLength": {
+                        "type": "number"
+                    },
+                    "monitordate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "createdate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "testname": {
+                        "type": "string"
+                    },
+                    "testno": {
+                        "type": "string"
+                    },
+                    "testtel": {
+                        "type": "string"
+                    },
+                    "monitorname": {
+                        "type": "string"
+                    },
+                    "monitorno": {
+                        "type": "string"
+                    },
+                    "monitortel": {
+                        "type": "string"
+                    },
+                    "supervisorname": {
+                        "type": "string"
+                    },
+                    "supervisorno": {
+                        "type": "string"
+                    },
+                    "supervisortel": {
+                        "type": "string"
+                    },
+                    "conclusionyb": {
+                        "type": "string"
+                    },
+                    "suggestion": {
+                        "type": "string"
+                    },
+                    "solution": {
+                        "type": "string"
+                    },
+                    "remark": {
+                        "type": "string"
+                    },
+                    "method": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "flag": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "submitFlag": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "ybjgDTOList": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/YbjgDTO"
+                        }
+                    },
+                    "cqspzPk": {
+                        "type": "integer",
+                        "description": "超前水平钻主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "cqspzId": {
+                        "type": "integer",
+                        "description": "超前水平钻ID",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "kwtype": {
+                        "type": "integer",
+                        "description": "钻孔类型:1超前水平钻;2加深炮孔",
+                        "format": "int32",
+                        "example": 1
+                    },
+                    "images": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "addition": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "cqspzZkzzDTOList": {
+                        "type": "array",
+                        "description": "钻孔柱状图列表",
+                        "items": {
+                            "$ref": "#/components/schemas/CqspzZkzzDTO"
+                        }
+                    }
+                },
+                "description": "CqspzDTO"
+            },
+            "CqspzZkzzDTO": {
+                "type": "object",
+                "properties": {
+                    "cqspzZkzzPk": {
+                        "type": "integer",
+                        "description": "钻孔柱状图主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "cqspzZkzzId": {
+                        "type": "integer",
+                        "description": "钻孔柱状图ID",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "cqspzPk": {
+                        "type": "integer",
+                        "description": "超前水平钻主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "kwbh": {
+                        "type": "string",
+                        "description": "孔位编号",
+                        "example": "ZK001"
+                    },
+                    "jgdjl": {
+                        "type": "number",
+                        "description": "距拱顶距离:单位m",
+                        "example": 5.5
+                    },
+                    "jzxxjl": {
+                        "type": "number",
+                        "description": "距中心线距离:单位m",
+                        "example": 3.2
+                    },
+                    "kwljangle": {
+                        "type": "number",
+                        "description": "开孔立角角度:单位°",
+                        "example": 15.5
+                    },
+                    "kwpjangle": {
+                        "type": "number",
+                        "description": "开孔偏角角度:单位°",
+                        "example": 10.5
+                    },
+                    "zkzj": {
+                        "type": "integer",
+                        "description": "钻孔直径:单位mm",
+                        "format": "int32",
+                        "example": 150
+                    },
+                    "zjcode": {
+                        "type": "string",
+                        "description": "钻机型号",
+                        "example": "ZJ-50"
+                    },
+                    "kssj": {
+                        "type": "string",
+                        "description": "开始时间",
+                        "format": "date-time"
+                    },
+                    "jssj": {
+                        "type": "string",
+                        "description": "结束时间",
+                        "format": "date-time"
+                    },
+                    "kkwzsyt": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "sfqx": {
+                        "type": "integer",
+                        "description": "是否取芯:1取芯;0不取芯",
+                        "format": "int32",
+                        "example": 1
+                    },
+                    "qxpic": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "remark": {
+                        "type": "string",
+                        "description": "备注",
+                        "example": "正常钻进"
+                    },
+                    "cqspzZkzzZtjlbDTOList": {
+                        "type": "array",
+                        "description": "钻探记录列表",
+                        "items": {
+                            "$ref": "#/components/schemas/CqspzZkzzZtjlbDTO"
+                        }
+                    },
+                    "cqspzZkzzDcxxDTOList": {
+                        "type": "array",
+                        "description": "地层信息列表",
+                        "items": {
+                            "$ref": "#/components/schemas/CqspzZkzzDcxxDTO"
+                        }
+                    }
+                },
+                "description": "钻孔柱状图DTO"
+            },
+            "CqspzZkzzDcxxDTO": {
+                "type": "object",
+                "properties": {
+                    "cqspzZkzzDcxxPk": {
+                        "type": "integer",
+                        "description": "地层信息主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "cqspzZkzzDcxxId": {
+                        "type": "integer",
+                        "description": "地层信息ID",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "cqspzZkzzPk": {
+                        "type": "integer",
+                        "description": "钻孔柱状图主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "dcdh": {
+                        "type": "integer",
+                        "description": "地层代号",
+                        "format": "int32",
+                        "example": 1
+                    },
+                    "dclc": {
+                        "type": "number",
+                        "description": "层底里程:单位m",
+                        "example": 215763.32
+                    },
+                    "fchd": {
+                        "type": "number",
+                        "description": "分层厚度:单位m",
+                        "example": 5.5
+                    },
+                    "cslcz": {
+                        "type": "number",
+                        "description": "出水位置:单位m",
+                        "example": 10.5
+                    },
+                    "csl": {
+                        "type": "number",
+                        "description": "出水量:单位m³/h",
+                        "example": 3.5
+                    },
+                    "cywz": {
+                        "type": "string",
+                        "description": "采样位置",
+                        "example": "中部"
+                    },
+                    "gcdzjj": {
+                        "type": "string",
+                        "description": "工程地质简述",
+                        "example": "灰岩"
+                    }
+                },
+                "description": "地层信息DTO"
+            },
+            "CqspzZkzzZtjlbDTO": {
+                "type": "object",
+                "properties": {
+                    "cqspzZkzzZtjlbPk": {
+                        "type": "integer",
+                        "description": "钻探记录主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "cqspzZkzzZtjlbId": {
+                        "type": "integer",
+                        "description": "钻探记录ID",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "cqspzZkzzPk": {
+                        "type": "integer",
+                        "description": "钻孔柱状图主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "kssj": {
+                        "type": "string",
+                        "description": "开始时间",
+                        "format": "date-time"
+                    },
+                    "jssj": {
+                        "type": "string",
+                        "description": "结束时间",
+                        "format": "date-time"
+                    },
+                    "zksd": {
+                        "type": "number",
+                        "description": "钻孔深度:单位m",
+                        "example": 50.25
+                    },
+                    "zkpressure": {
+                        "type": "number",
+                        "description": "钻孔压力:单位mPa",
+                        "example": 15.5
+                    },
+                    "zkspeed": {
+                        "type": "number",
+                        "description": "钻速:单位转/分",
+                        "example": 55.5
+                    },
+                    "kwwaterpre": {
+                        "type": "number",
+                        "description": "孔内水压:单位mPa",
+                        "example": 2.5
+                    },
+                    "kwwaterspe": {
+                        "type": "number",
+                        "description": "孔内水量:单位m³/h",
+                        "example": 5.5
+                    },
+                    "dzms": {
+                        "type": "string",
+                        "description": "钻进特征及地质情况简述",
+                        "example": "岩体完整"
+                    },
+                    "kwzbxl": {
+                        "type": "string",
+                        "description": "孔位坐标序列",
+                        "example": "100#200"
+                    }
+                },
+                "description": "钻探记录DTO"
+            },
             "WzjcDTO": {
                 "type": "object",
                 "properties": {
@@ -4238,6 +4379,87 @@
                         "type": "integer",
                         "description": "预报分段信息PK",
                         "format": "int64"
+                    },
+                    "ybId": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "siteId": {
+                        "type": "string"
+                    },
+                    "dkname": {
+                        "type": "string"
+                    },
+                    "dkilo": {
+                        "type": "number"
+                    },
+                    "ybLength": {
+                        "type": "number"
+                    },
+                    "monitordate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "createdate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "testname": {
+                        "type": "string"
+                    },
+                    "testno": {
+                        "type": "string"
+                    },
+                    "testtel": {
+                        "type": "string"
+                    },
+                    "monitorname": {
+                        "type": "string"
+                    },
+                    "monitorno": {
+                        "type": "string"
+                    },
+                    "monitortel": {
+                        "type": "string"
+                    },
+                    "supervisorname": {
+                        "type": "string"
+                    },
+                    "supervisorno": {
+                        "type": "string"
+                    },
+                    "supervisortel": {
+                        "type": "string"
+                    },
+                    "conclusionyb": {
+                        "type": "string"
+                    },
+                    "suggestion": {
+                        "type": "string"
+                    },
+                    "solution": {
+                        "type": "string"
+                    },
+                    "remark": {
+                        "type": "string"
+                    },
+                    "method": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "flag": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "submitFlag": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "ybjgDTOList": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/YbjgDTO"
+                        }
                     },
                     "cumEventnum": {
                         "type": "integer",
@@ -5281,7 +5503,7 @@
                     },
                     "cldjnum": {
                         "type": "integer",
-                        "description": "测量电极测点数量:单位:个,不超过2��整数",
+                        "description": "测量电极测点数量:单位:个,不超过2位整数",
                         "format": "int32",
                         "example": 20
                     },
@@ -5607,6 +5829,7 @@
                     "revise",
                     "sdPk",
                     "sjybLength",
+                    "sjybPk",
                     "username",
                     "zksl",
                     "zxms"
@@ -5690,6 +5913,12 @@
                         "description": "填写人账号",
                         "example": "张三"
                     },
+                    "sjybPk": {
+                        "type": "integer",
+                        "description": "设计预报方法主键",
+                        "format": "int64",
+                        "example": 1
+                    },
                     "revise": {
                         "type": "string",
                         "description": "修改原因说明"
@@ -5697,126 +5926,155 @@
                 },
                 "description": "设计预报方法更新请求对象"
             },
-            "BaseResponseString": {
+            "SjwydjUpdateDTO": {
+                "required": [
+                    "bdPk",
+                    "dkilo",
+                    "dkname",
+                    "endMileage",
+                    "revise",
+                    "sdPk",
+                    "sjwydjLength",
+                    "sjwydjPk",
+                    "wydj"
+                ],
                 "type": "object",
                 "properties": {
-                    "resultcode": {
+                    "bdPk": {
                         "type": "integer",
-                        "format": "int32"
+                        "description": "标段主键",
+                        "format": "int64",
+                        "example": 1
                     },
-                    "message": {
-                        "type": "string"
-                    },
-                    "data": {
-                        "type": "string"
-                    }
-                }
-            },
-            "Sjwydj": {
-                "type": "object",
-                "properties": {
-                    "sjwydjPk": {
+                    "sdPk": {
                         "type": "integer",
-                        "format": "int64"
-                    },
-                    "sjwydjId": {
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "siteId": {
-                        "type": "string"
+                        "description": "隧道主键",
+                        "format": "int64",
+                        "example": 1
                     },
                     "dkname": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "里程冠号",
+                        "example": "DK"
                     },
                     "dkilo": {
-                        "type": "number"
+                        "type": "integer",
+                        "description": "起始里程",
+                        "format": "int32",
+                        "example": 69
                     },
-                    "sjwydjLength": {
-                        "type": "number"
+                    "endMileage": {
+                        "type": "number",
+                        "description": "结束里程",
+                        "format": "double",
+                        "example": 12.67
                     },
                     "wydj": {
                         "type": "integer",
-                        "format": "int32"
+                        "description": "围岩等级(1-6)",
+                        "format": "int32",
+                        "example": 3
+                    },
+                    "sjwydjLength": {
+                        "type": "number",
+                        "description": "预报长度",
+                        "format": "double",
+                        "example": 7
+                    },
+                    "remark": {
+                        "type": "string",
+                        "description": "备注"
+                    },
+                    "sjwydjPk": {
+                        "type": "integer",
+                        "description": "设计围岩等级主键",
+                        "format": "int64"
                     },
                     "revise": {
-                        "type": "string"
-                    },
-                    "username": {
-                        "type": "string"
-                    },
-                    "gmtCreate": {
                         "type": "string",
-                        "format": "date-time"
-                    },
-                    "gmtModified": {
-                        "type": "string",
-                        "format": "date-time"
+                        "description": "修改原因说明"
                     }
-                }
+                },
+                "description": "设计围岩等级更新请求对象"
             },
-            "SjwydjDetailVO": {
+            "SjdzUpdateDTO": {
+                "required": [
+                    "dkilo",
+                    "dkname",
+                    "dzxxfj",
+                    "endMileage",
+                    "method",
+                    "revise",
+                    "sjdzLength",
+                    "sjdzPk"
+                ],
                 "type": "object",
                 "properties": {
-                    "sjwydj": {
-                        "$ref": "#/components/schemas/Sjwydj"
-                    }
-                }
-            },
-            "Sjdz": {
-                "type": "object",
-                "properties": {
-                    "sjdzPk": {
+                    "bdPk": {
                         "type": "integer",
-                        "format": "int64"
+                        "description": "标段主键",
+                        "format": "int64",
+                        "example": 1
                     },
-                    "sjdzId": {
+                    "sdPk": {
                         "type": "integer",
-                        "format": "int64"
-                    },
-                    "siteId": {
-                        "type": "string"
-                    },
-                    "method": {
-                        "type": "integer",
-                        "format": "int32"
+                        "description": "隧道主键",
+                        "format": "int64",
+                        "example": 1
                     },
                     "dkname": {
-                        "type": "string"
+                        "type": "string",
+                        "description": "里程冠号",
+                        "example": "DK"
                     },
                     "dkilo": {
-                        "type": "number"
+                        "type": "integer",
+                        "description": "起始里程",
+                        "format": "int32",
+                        "example": 69
+                    },
+                    "endMileage": {
+                        "type": "number",
+                        "description": "结束里程",
+                        "format": "double",
+                        "example": 12.67
+                    },
+                    "method": {
+                        "maximum": 5,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "地质分类(1:岩溶发育度;2:瓦斯影响度;3:地应力影响度;4:涌水涌泥程度;5:断层稳定程度)",
+                        "format": "int32",
+                        "example": 1
                     },
                     "sjdzLength": {
-                        "type": "number"
+                        "type": "number",
+                        "description": "预报长度",
+                        "format": "double",
+                        "example": 7
                     },
                     "dzxxfj": {
+                        "maximum": 4,
+                        "minimum": 1,
                         "type": "integer",
                         "format": "int32"
                     },
+                    "remark": {
+                        "type": "string",
+                        "description": "备注"
+                    },
+                    "sjdzPk": {
+                        "type": "integer",
+                        "description": "设计地质主键",
+                        "format": "int64",
+                        "example": 1
+                    },
                     "revise": {
-                        "type": "string"
-                    },
-                    "username": {
-                        "type": "string"
-                    },
-                    "gmtCreate": {
                         "type": "string",
-                        "format": "date-time"
-                    },
-                    "gmtModified": {
-                        "type": "string",
-                        "format": "date-time"
+                        "description": "备注"
                     }
-                }
-            },
-            "SjdzDetailVO": {
-                "type": "object",
-                "properties": {
-                    "sjdz": {
-                        "$ref": "#/components/schemas/Sjdz"
-                    }
-                }
+                },
+                "description": "设计地质信息更新请求对象"
             },
             "DssmDTO": {
                 "type": "object",
@@ -6218,6 +6476,161 @@
                 },
                 "description": "JspkFileDTO"
             },
+            "CqspzFileDTO": {
+                "type": "object",
+                "properties": {
+                    "ybPk": {
+                        "type": "integer",
+                        "description": "预报分段信息PK",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "siteId": {
+                        "type": "string",
+                        "description": "工点ID",
+                        "example": "SITE001"
+                    },
+                    "images": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "addition": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "cqspzZkzzFileDTOList": {
+                        "type": "array",
+                        "description": "钻孔柱状图文件列表",
+                        "items": {
+                            "$ref": "#/components/schemas/CqspzZkzzFileDTO"
+                        }
+                    }
+                },
+                "description": "CqspzFileDTO"
+            },
+            "CqspzZkzzFileDTO": {
+                "type": "object",
+                "properties": {
+                    "cqspzZkzzPk": {
+                        "type": "integer",
+                        "description": "钻孔柱状图主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "kkwzsyt": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "qxpic": {
+                        "type": "string",
+                        "format": "binary"
+                    }
+                },
+                "description": "钻孔柱状图文件DTO"
+            },
+            "ZhjlCreateDTO": {
+                "type": "object",
+                "properties": {
+                    "zhjlId": {
+                        "type": "integer",
+                        "description": "综合结论ID",
+                        "format": "int64",
+                        "example": 10001
+                    },
+                    "siteId": {
+                        "type": "string",
+                        "description": "工点ID",
+                        "example": "29884"
+                    },
+                    "remark": {
+                        "type": "string",
+                        "description": "综合结论简述"
+                    },
+                    "addition": {
+                        "type": "string",
+                        "description": "附件(综合结论报告)流水号序列"
+                    },
+                    "warndealflag": {
+                        "type": "string",
+                        "description": "处置状态(0:未处置;1:已处置)",
+                        "format": "byte",
+                        "example": "MA=="
+                    },
+                    "ybPkList": {
+                        "type": "array",
+                        "description": "预报段主键列表",
+                        "items": {
+                            "type": "integer",
+                            "description": "预报段主键列表",
+                            "format": "int64"
+                        }
+                    },
+                    "ybjgDTOList": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/YbjgDTO"
+                        }
+                    }
+                },
+                "description": "综合结论创建请求对象"
+            },
+            "ZhjlCzinfoCreateDTO": {
+                "type": "object",
+                "properties": {
+                    "zhjlPk": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "handletype": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "handleresult": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "subsectionId": {
+                        "type": "string"
+                    },
+                    "handlecontent": {
+                        "type": "string"
+                    },
+                    "addition": {
+                        "type": "string"
+                    },
+                    "handletime": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "liableusername": {
+                        "type": "string"
+                    },
+                    "liableuserno": {
+                        "type": "string"
+                    },
+                    "liableuserphone": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ZhjlFileDTO": {
+                "type": "object",
+                "properties": {
+                    "siteId": {
+                        "type": "string",
+                        "description": "工点Id"
+                    },
+                    "zhjlPk": {
+                        "type": "integer",
+                        "description": "综合结论主键",
+                        "format": "int64"
+                    },
+                    "addition": {
+                        "type": "string",
+                        "format": "binary"
+                    }
+                }
+            },
             "WzjcFileDTO": {
                 "type": "object",
                 "properties": {
@@ -6539,6 +6952,133 @@
                 },
                 "description": "设计预报方法创建请求对象"
             },
+            "SjwydjCreateDTO": {
+                "required": [
+                    "bdPk",
+                    "dkilo",
+                    "dkname",
+                    "endMileage",
+                    "sdPk",
+                    "sjwydjLength",
+                    "wydj"
+                ],
+                "type": "object",
+                "properties": {
+                    "bdPk": {
+                        "type": "integer",
+                        "description": "标段主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "sdPk": {
+                        "type": "integer",
+                        "description": "隧道主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "dkname": {
+                        "type": "string",
+                        "description": "里程冠号",
+                        "example": "DK"
+                    },
+                    "dkilo": {
+                        "type": "integer",
+                        "description": "起始里程",
+                        "format": "int32",
+                        "example": 69
+                    },
+                    "endMileage": {
+                        "type": "number",
+                        "description": "结束里程",
+                        "format": "double",
+                        "example": 12.67
+                    },
+                    "wydj": {
+                        "type": "integer",
+                        "description": "围岩等级(1-6)",
+                        "format": "int32",
+                        "example": 3
+                    },
+                    "sjwydjLength": {
+                        "type": "number",
+                        "description": "预报长度",
+                        "format": "double",
+                        "example": 7
+                    },
+                    "remark": {
+                        "type": "string",
+                        "description": "备注"
+                    }
+                },
+                "description": "设计围岩等级创建请求对象"
+            },
+            "SjdzCreateDTO": {
+                "required": [
+                    "dkilo",
+                    "dkname",
+                    "dzxxfj",
+                    "endMileage",
+                    "method",
+                    "sjdzLength"
+                ],
+                "type": "object",
+                "properties": {
+                    "bdPk": {
+                        "type": "integer",
+                        "description": "标段主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "sdPk": {
+                        "type": "integer",
+                        "description": "隧道主键",
+                        "format": "int64",
+                        "example": 1
+                    },
+                    "dkname": {
+                        "type": "string",
+                        "description": "里程冠号",
+                        "example": "DK"
+                    },
+                    "dkilo": {
+                        "type": "integer",
+                        "description": "起始里程",
+                        "format": "int32",
+                        "example": 69
+                    },
+                    "endMileage": {
+                        "type": "number",
+                        "description": "结束里程",
+                        "format": "double",
+                        "example": 12.67
+                    },
+                    "method": {
+                        "maximum": 5,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "地质分类(1:岩溶发育度;2:瓦斯影响度;3:地应力影响度;4:涌水涌泥程度;5:断层稳定程度)",
+                        "format": "int32",
+                        "example": 1
+                    },
+                    "sjdzLength": {
+                        "type": "number",
+                        "description": "预报长度",
+                        "format": "double",
+                        "example": 7
+                    },
+                    "dzxxfj": {
+                        "maximum": 4,
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "remark": {
+                        "type": "string",
+                        "description": "备注"
+                    }
+                },
+                "description": "设计地质信息创建请求对象"
+            },
             "DssmFileDTO": {
                 "type": "object",
                 "properties": {
@@ -6599,25 +7139,20 @@
                 },
                 "description": "DbbcFileDTO"
             },
-            "ResetPasswordRequest": {
-                "required": [
-                    "newPassword"
-                ],
+            "BaseResponseString": {
                 "type": "object",
                 "properties": {
-                    "userPk": {
+                    "resultcode": {
                         "type": "integer",
-                        "description": "用户主键",
-                        "format": "int64"
+                        "format": "int32"
                     },
-                    "newPassword": {
-                        "maxLength": 20,
-                        "minLength": 6,
-                        "type": "string",
-                        "description": "新密码"
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "type": "string"
                     }
-                },
-                "description": "重置密码请求"
+                }
             },
             "LoginRequest": {
                 "required": [
@@ -6695,6 +7230,41 @@
                     }
                 },
                 "description": "修改密码请求"
+            },
+            "UserResourcePermissionDTO": {
+                "type": "object",
+                "properties": {
+                    "userPk": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "resourceType": {
+                        "type": "string"
+                    },
+                    "resourcePath": {
+                        "type": "string"
+                    }
+                }
+            },
+            "ResetPasswordRequest": {
+                "required": [
+                    "newPassword"
+                ],
+                "type": "object",
+                "properties": {
+                    "userPk": {
+                        "type": "integer",
+                        "description": "用户主键",
+                        "format": "int64"
+                    },
+                    "newPassword": {
+                        "maxLength": 20,
+                        "minLength": 6,
+                        "type": "string",
+                        "description": "新密码"
+                    }
+                },
+                "description": "重置密码请求"
             },
             "BaseResponseZzmsmDetailVO": {
                 "type": "object",
@@ -7050,10 +7620,6 @@
                 }
             },
             "YbInfoPageQueryDTO": {
-                "required": [
-                    "siteId",
-                    "submitFlag"
-                ],
                 "type": "object",
                 "properties": {
                     "pageNum": {
@@ -7643,7 +8209,7 @@
                     }
                 }
             },
-            "BaseResponseZhjlPageVO": {
+            "BaseResponseListZhjlCzinfoVO": {
                 "type": "object",
                 "properties": {
                     "resultcode": {
@@ -7654,14 +8220,121 @@
                         "type": "string"
                     },
                     "data": {
-                        "$ref": "#/components/schemas/ZhjlPageVO"
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ZhjlCzinfoVO"
+                        }
                     }
                 }
             },
-            "IPageZhjl": {
+            "ZhjlCzinfoVO": {
                 "type": "object",
                 "properties": {
-                    "current": {
+                    "zhjlCzinfoPk": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "zhjlCzinfoId": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "zhjlPk": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "handletype": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "handleresult": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "subsectionId": {
+                        "type": "string"
+                    },
+                    "handlecontent": {
+                        "type": "string"
+                    },
+                    "addition": {
+                        "type": "string"
+                    },
+                    "handletime": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "liableusername": {
+                        "type": "string"
+                    },
+                    "liableuserno": {
+                        "type": "string"
+                    },
+                    "liableuserphone": {
+                        "type": "string"
+                    },
+                    "gmtCreate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "gmtModified": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "ZhjlPageQueryDTO": {
+                "type": "object",
+                "properties": {
+                    "pageNum": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "pageSize": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "siteId": {
+                        "type": "string"
+                    },
+                    "warndealflag": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "begin": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "end": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "BaseResponsePageZhjlInfoVO": {
+                "type": "object",
+                "properties": {
+                    "resultcode": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/PageZhjlInfoVO"
+                    }
+                }
+            },
+            "PageZhjlInfoVO": {
+                "type": "object",
+                "properties": {
+                    "records": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ZhjlInfoVO"
+                        }
+                    },
+                    "total": {
                         "type": "integer",
                         "format": "int64"
                     },
@@ -7669,38 +8342,48 @@
                         "type": "integer",
                         "format": "int64"
                     },
-                    "total": {
+                    "current": {
                         "type": "integer",
                         "format": "int64"
+                    },
+                    "orders": {
+                        "type": "array",
+                        "writeOnly": true,
+                        "items": {
+                            "$ref": "#/components/schemas/OrderItem"
+                        }
+                    },
+                    "optimizeCountSql": {
+                        "$ref": "#/components/schemas/PageZhjlInfoVO"
+                    },
+                    "searchCount": {
+                        "$ref": "#/components/schemas/PageZhjlInfoVO"
+                    },
+                    "optimizeJoinOfCountSql": {
+                        "type": "boolean",
+                        "writeOnly": true
+                    },
+                    "maxLimit": {
+                        "type": "integer",
+                        "format": "int64",
+                        "writeOnly": true
+                    },
+                    "countId": {
+                        "type": "string",
+                        "writeOnly": true
                     },
                     "pages": {
                         "type": "integer",
                         "format": "int64"
-                    },
-                    "records": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/Zhjl"
-                        }
                     }
                 }
             },
-            "Zhjl": {
+            "ZhjlInfoVO": {
                 "type": "object",
                 "properties": {
                     "zhjlPk": {
                         "type": "integer",
                         "format": "int64"
-                    },
-                    "zhjlId": {
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "remark": {
-                        "type": "string"
-                    },
-                    "addition": {
-                        "type": "string"
                     },
                     "warndealflag": {
                         "type": "string",
@@ -7713,14 +8396,20 @@
                     "gmtModified": {
                         "type": "string",
                         "format": "date-time"
-                    }
-                }
-            },
-            "ZhjlPageVO": {
-                "type": "object",
-                "properties": {
-                    "zhjlIPage": {
-                        "$ref": "#/components/schemas/IPageZhjl"
+                    },
+                    "ybIdList": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
+                    },
+                    "ybjgIdList": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "format": "int64"
+                        }
                     }
                 }
             },
@@ -9141,6 +9830,12 @@
                         "type": "integer",
                         "format": "int64"
                     },
+                    "records": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Sjyb"
+                        }
+                    },
                     "total": {
                         "type": "integer",
                         "format": "int64"
@@ -9148,12 +9843,6 @@
                     "pages": {
                         "type": "integer",
                         "format": "int64"
-                    },
-                    "records": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/Sjyb"
-                        }
                     }
                 }
             },
@@ -9177,6 +9866,57 @@
                     },
                     "data": {
                         "$ref": "#/components/schemas/SjwydjDetailVO"
+                    }
+                }
+            },
+            "Sjwydj": {
+                "type": "object",
+                "properties": {
+                    "sjwydjPk": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "sjwydjId": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "siteId": {
+                        "type": "string"
+                    },
+                    "dkname": {
+                        "type": "string"
+                    },
+                    "dkilo": {
+                        "type": "number"
+                    },
+                    "sjwydjLength": {
+                        "type": "number"
+                    },
+                    "wydj": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "revise": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "gmtCreate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "gmtModified": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "SjwydjDetailVO": {
+                "type": "object",
+                "properties": {
+                    "sjwydj": {
+                        "$ref": "#/components/schemas/Sjwydj"
                     }
                 }
             },
@@ -9206,6 +9946,12 @@
                         "type": "integer",
                         "format": "int64"
                     },
+                    "records": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Sjwydj"
+                        }
+                    },
                     "total": {
                         "type": "integer",
                         "format": "int64"
@@ -9213,12 +9959,6 @@
                     "pages": {
                         "type": "integer",
                         "format": "int64"
-                    },
-                    "records": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/Sjwydj"
-                        }
                     }
                 }
             },
@@ -9242,6 +9982,61 @@
                     },
                     "data": {
                         "$ref": "#/components/schemas/SjdzDetailVO"
+                    }
+                }
+            },
+            "Sjdz": {
+                "type": "object",
+                "properties": {
+                    "sjdzPk": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "sjdzId": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "siteId": {
+                        "type": "string"
+                    },
+                    "method": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "dkname": {
+                        "type": "string"
+                    },
+                    "dkilo": {
+                        "type": "number"
+                    },
+                    "sjdzLength": {
+                        "type": "number"
+                    },
+                    "dzxxfj": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "revise": {
+                        "type": "string"
+                    },
+                    "username": {
+                        "type": "string"
+                    },
+                    "gmtCreate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "gmtModified": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "SjdzDetailVO": {
+                "type": "object",
+                "properties": {
+                    "sjdz": {
+                        "$ref": "#/components/schemas/Sjdz"
                     }
                 }
             },
@@ -9271,6 +10066,12 @@
                         "type": "integer",
                         "format": "int64"
                     },
+                    "records": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Sjdz"
+                        }
+                    },
                     "total": {
                         "type": "integer",
                         "format": "int64"
@@ -9278,12 +10079,6 @@
                     "pages": {
                         "type": "integer",
                         "format": "int64"
-                    },
-                    "records": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/Sjdz"
-                        }
                     }
                 }
             },
@@ -9295,415 +10090,13 @@
                     }
                 }
             },
-            "BaseResponseZzmkiloDTO": {
+            "DownloadFileQueryDTO": {
                 "type": "object",
                 "properties": {
-                    "resultcode": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "message": {
+                    "siteId": {
                         "type": "string"
                     },
-                    "data": {
-                        "$ref": "#/components/schemas/ZzmkiloDTO"
-                    }
-                }
-            },
-            "ZzmkiloDTO": {
-                "type": "object",
-                "properties": {
-                    "dkname": {
-                        "type": "string"
-                    },
-                    "dkilo": {
-                        "type": "string"
-                    }
-                }
-            },
-            "BaseResponseListWarnInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "resultcode": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "message": {
-                        "type": "string"
-                    },
-                    "data": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/WarnInfoDTO"
-                        }
-                    }
-                }
-            },
-            "WarnInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "siteid": {
-                        "type": "string"
-                    },
-                    "createdate": {
-                        "type": "string"
-                    },
-                    "zhjlid": {
-                        "type": "string"
-                    },
-                    "ybdid": {
-                        "type": "string"
-                    },
-                    "fdinfo": {
-                        "type": "string"
-                    },
-                    "remark": {
-                        "type": "string"
-                    },
-                    "addition": {
-                        "type": "string"
-                    },
-                    "warndealflag": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "grade": {
-                        "type": "integer",
-                        "format": "int32"
-                    }
-                }
-            },
-            "BaseResponseListWarnDealInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "resultcode": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "message": {
-                        "type": "string"
-                    },
-                    "data": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/WarnDealInfoDTO"
-                        }
-                    }
-                }
-            },
-            "WarnDealInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "warnid": {
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "warntype": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "dkname": {
-                        "type": "string"
-                    },
-                    "dkilo": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "handledesc": {
-                        "type": "string"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "handletime": {
-                        "type": "string"
-                    },
-                    "liableusername": {
-                        "type": "string"
-                    },
-                    "liableuserno": {
-                        "type": "string"
-                    },
-                    "liableuserphone": {
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "handleresult": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "method": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "delay": {
-                        "type": "number",
-                        "format": "double"
-                    }
-                }
-            },
-            "BaseResponseListSjybInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "resultcode": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "message": {
-                        "type": "string"
-                    },
-                    "data": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/SjybInfoDTO"
-                        }
-                    }
-                }
-            },
-            "SjybInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string"
-                    },
-                    "siteid": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "method": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "dkname": {
-                        "type": "string"
-                    },
-                    "dkstartmail": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "dkendmail": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "minsm": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "length": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "pknumber": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "qxnumber": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "createdate": {
-                        "type": "string"
-                    },
-                    "updatetime": {
-                        "type": "string"
-                    },
-                    "flag": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "revices": {
-                        "type": "string"
-                    }
-                }
-            },
-            "BaseResponseListSjwyInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "resultcode": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "message": {
-                        "type": "string"
-                    },
-                    "data": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/SjwyInfoDTO"
-                        }
-                    }
-                }
-            },
-            "SjwyInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string"
-                    },
-                    "siteid": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "startmail": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "endmail": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "risklevel": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "userflag": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "createtime": {
-                        "type": "string"
-                    },
-                    "updatetime": {
-                        "type": "string"
-                    },
-                    "dkname": {
-                        "type": "string"
-                    },
-                    "revices": {
-                        "type": "string"
-                    }
-                }
-            },
-            "BaseResponseListNearInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "resultcode": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "message": {
-                        "type": "string"
-                    },
-                    "data": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/NearInfoDTO"
-                        }
-                    }
-                }
-            },
-            "NearInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "format": "int64"
-                    },
-                    "siteid": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "dkname": {
-                        "type": "string"
-                    },
-                    "lastdkilo": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "facedkilo": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "delay": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "method": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "account": {
-                        "type": "string"
-                    },
-                    "createdate": {
-                        "type": "string"
-                    },
-                    "updatedate": {
-                        "type": "string"
-                    },
-                    "userflag": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "description": {
-                        "type": "string"
-                    },
-                    "makeAccount": {
-                        "type": "string"
-                    }
-                }
-            },
-            "BaseResponseListGeologyInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "resultcode": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "message": {
-                        "type": "string"
-                    },
-                    "data": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/GeologyInfoDTO"
-                        }
-                    }
-                }
-            },
-            "GeologyInfoDTO": {
-                "type": "object",
-                "properties": {
-                    "id": {
-                        "type": "string"
-                    },
-                    "siteid": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "method": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "dkname": {
-                        "type": "string"
-                    },
-                    "startdkilo": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "length": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "dzxxfj": {
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "enddkilo": {
-                        "type": "number",
-                        "format": "double"
-                    },
-                    "createdate": {
-                        "type": "string"
-                    },
-                    "updatedate": {
-                        "type": "string"
-                    },
-                    "userflag": {
-                        "type": "string"
-                    },
-                    "revices": {
+                    "fileName": {
                         "type": "string"
                     }
                 }
@@ -10141,6 +10534,466 @@
                     },
                     "useflag": {
                         "type": "string"
+                    }
+                }
+            },
+            "BaseResponseListUserResourcePermission": {
+                "type": "object",
+                "properties": {
+                    "resultcode": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/UserResourcePermission"
+                        }
+                    }
+                }
+            },
+            "UserResourcePermission": {
+                "type": "object",
+                "properties": {
+                    "userResourcePermissionPk": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "userPk": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "resourceType": {
+                        "type": "string"
+                    },
+                    "resourcePath": {
+                        "type": "string"
+                    },
+                    "gmtCreate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "gmtModified": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "BasePageQueryDTO": {
+                "type": "object",
+                "properties": {
+                    "pageNum": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "pageSize": {
+                        "type": "integer",
+                        "format": "int32"
+                    }
+                }
+            },
+            "BaseResponsePageUser": {
+                "type": "object",
+                "properties": {
+                    "resultcode": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/PageUser"
+                    }
+                }
+            },
+            "PageUser": {
+                "type": "object",
+                "properties": {
+                    "records": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/User"
+                        }
+                    },
+                    "total": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "size": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "current": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "orders": {
+                        "type": "array",
+                        "writeOnly": true,
+                        "items": {
+                            "$ref": "#/components/schemas/OrderItem"
+                        }
+                    },
+                    "optimizeCountSql": {
+                        "$ref": "#/components/schemas/PageUser"
+                    },
+                    "searchCount": {
+                        "$ref": "#/components/schemas/PageUser"
+                    },
+                    "optimizeJoinOfCountSql": {
+                        "type": "boolean",
+                        "writeOnly": true
+                    },
+                    "maxLimit": {
+                        "type": "integer",
+                        "format": "int64",
+                        "writeOnly": true
+                    },
+                    "countId": {
+                        "type": "string",
+                        "writeOnly": true
+                    },
+                    "pages": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                }
+            },
+            "User": {
+                "type": "object",
+                "properties": {
+                    "userPk": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "userId": {
+                        "type": "string"
+                    },
+                    "login": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "type": "string"
+                    },
+                    "userAccount": {
+                        "type": "string"
+                    },
+                    "realname": {
+                        "type": "string"
+                    },
+                    "departmentId": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "useflag": {
+                        "type": "string",
+                        "format": "byte"
+                    },
+                    "telephone": {
+                        "type": "string"
+                    },
+                    "gmtCreate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "gmtModified": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "BaseResponseListRole": {
+                "type": "object",
+                "properties": {
+                    "resultcode": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Role"
+                        }
+                    }
+                }
+            },
+            "Role": {
+                "type": "object",
+                "properties": {
+                    "rolePk": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "roleKey": {
+                        "type": "string"
+                    },
+                    "roleName": {
+                        "type": "string"
+                    },
+                    "roleDesc": {
+                        "type": "string"
+                    },
+                    "useflag": {
+                        "type": "string",
+                        "format": "byte"
+                    },
+                    "gmtCreate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "gmtModified": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "BaseResponsePageRole": {
+                "type": "object",
+                "properties": {
+                    "resultcode": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/PageRole"
+                    }
+                }
+            },
+            "PageRole": {
+                "type": "object",
+                "properties": {
+                    "records": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Role"
+                        }
+                    },
+                    "total": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "size": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "current": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "orders": {
+                        "type": "array",
+                        "writeOnly": true,
+                        "items": {
+                            "$ref": "#/components/schemas/OrderItem"
+                        }
+                    },
+                    "optimizeCountSql": {
+                        "$ref": "#/components/schemas/PageRole"
+                    },
+                    "searchCount": {
+                        "$ref": "#/components/schemas/PageRole"
+                    },
+                    "optimizeJoinOfCountSql": {
+                        "type": "boolean",
+                        "writeOnly": true
+                    },
+                    "maxLimit": {
+                        "type": "integer",
+                        "format": "int64",
+                        "writeOnly": true
+                    },
+                    "countId": {
+                        "type": "string",
+                        "writeOnly": true
+                    },
+                    "pages": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                }
+            },
+            "BaseResponsePageSite": {
+                "type": "object",
+                "properties": {
+                    "resultcode": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/PageSite"
+                    }
+                }
+            },
+            "PageSite": {
+                "type": "object",
+                "properties": {
+                    "records": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Site"
+                        }
+                    },
+                    "total": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "size": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "current": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "orders": {
+                        "type": "array",
+                        "writeOnly": true,
+                        "items": {
+                            "$ref": "#/components/schemas/OrderItem"
+                        }
+                    },
+                    "optimizeCountSql": {
+                        "$ref": "#/components/schemas/PageSite"
+                    },
+                    "searchCount": {
+                        "$ref": "#/components/schemas/PageSite"
+                    },
+                    "optimizeJoinOfCountSql": {
+                        "type": "boolean",
+                        "writeOnly": true
+                    },
+                    "maxLimit": {
+                        "type": "integer",
+                        "format": "int64",
+                        "writeOnly": true
+                    },
+                    "countId": {
+                        "type": "string",
+                        "writeOnly": true
+                    },
+                    "pages": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                }
+            },
+            "Site": {
+                "type": "object",
+                "properties": {
+                    "sitePk": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "siteId": {
+                        "type": "string"
+                    },
+                    "gzwId": {
+                        "type": "string"
+                    },
+                    "sitename": {
+                        "type": "string"
+                    },
+                    "sitecode": {
+                        "type": "string"
+                    },
+                    "siteStartKilo": {
+                        "type": "string"
+                    },
+                    "siteStopKilo": {
+                        "type": "string"
+                    },
+                    "useflag": {
+                        "type": "string",
+                        "format": "byte"
+                    },
+                    "gmtCreate": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "gmtModified": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            },
+            "BaseResponsePageBdAndGdVO": {
+                "type": "object",
+                "properties": {
+                    "resultcode": {
+                        "type": "integer",
+                        "format": "int32"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/PageBdAndGdVO"
+                    }
+                }
+            },
+            "PageBdAndGdVO": {
+                "type": "object",
+                "properties": {
+                    "records": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BdAndGdVO"
+                        }
+                    },
+                    "total": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "size": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "current": {
+                        "type": "integer",
+                        "format": "int64"
+                    },
+                    "orders": {
+                        "type": "array",
+                        "writeOnly": true,
+                        "items": {
+                            "$ref": "#/components/schemas/OrderItem"
+                        }
+                    },
+                    "optimizeCountSql": {
+                        "$ref": "#/components/schemas/PageBdAndGdVO"
+                    },
+                    "searchCount": {
+                        "$ref": "#/components/schemas/PageBdAndGdVO"
+                    },
+                    "optimizeJoinOfCountSql": {
+                        "type": "boolean",
+                        "writeOnly": true
+                    },
+                    "maxLimit": {
+                        "type": "integer",
+                        "format": "int64",
+                        "writeOnly": true
+                    },
+                    "countId": {
+                        "type": "string",
+                        "writeOnly": true
+                    },
+                    "pages": {
+                        "type": "integer",
+                        "format": "int64"
                     }
                 }
             }

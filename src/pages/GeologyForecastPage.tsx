@@ -175,76 +175,136 @@ function GeologyForecastPage() {
           render: (val: number) => val ? `${val}m` : '-'
         }
       ]
+    } else if (type === 'surface') {
+      specificColumns = [
+        {
+          title: '预报长度',
+          dataIndex: 'ybLength',
+          width: 100,
+          render: (val: number) => val ? `${val}m` : '-'
+        }
+      ]
     }
 
-    // 状态列（目前数据没返回状态，暂时写死或根据逻辑判断）
+    // 状态列 - 根据submitFlag显示状态
+    // submitFlag: 0=编辑中, 1=已上传
     const statusColumn = {
       title: '状态',
-      dataIndex: 'status',
+      dataIndex: 'submitFlag',
       width: 100,
-      render: () => (
-        <span style={{ color: '#ff7d00' }}>编辑中</span>
-      )
+      render: (val: number | string) => {
+        // 兼容数字和字符串类型
+        if (Number(val) === 1) {
+          return <span style={{ color: '#00b42a' }}>已上传</span>
+        }
+        return <span style={{ color: '#ff7d00' }}>编辑中</span>
+      }
     }
 
     // 上传提示列
+    // 上传提示列 - 根据状态显示
     const uploadTipColumn = {
       title: '上传提示',
       dataIndex: 'uploadTip',
-      width: 120,
-      render: () => '-'
+      width: 100,
+      render: (_: any, record: any) => {
+        const isUploaded = Number(record.submitFlag) === 1
+        if (isUploaded) {
+          return <span style={{ color: '#00b42a' }}>上传成功</span>
+        }
+        return <span style={{ color: '#86909c' }}>-</span>
+      }
     }
 
-    // 操作列
+    // 操作列 - 根据状态显示不同按钮
+    // 编辑中(submitFlag=0): 查看详情、编辑、复制、上传、删除
+    // 已上传(submitFlag=1): 查看详情、删除、撤回
     const operationColumn = {
       title: '操作',
       key: 'operation',
-      width: 220,
+      width: 180,
       fixed: 'right' as const,
-      render: (_: any, record: any) => (
-        <Space size="small">
-          <Button 
-            type="primary"
-            shape="circle"
-            size="small"
-            style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }} // 紫色
-            icon={<IconEye />}
-            onClick={() => handleViewDetail(record)}
-          />
-          <Button 
-            type="primary"
-            shape="circle" 
-            size="small"
-            style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
-            icon={<IconEdit />}
-            onClick={() => handleEdit(record)}
-          />
-          <Button 
-            type="primary"
-            shape="circle"
-            size="small"
-            style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
-            icon={<IconCopy />}
-            onClick={() => handleCopy(record)}
-          />
-          <Button 
-            type="primary"
-            shape="circle"
-            size="small"
-            style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
-            icon={<IconUpload />}
-            onClick={() => handleUpload(record)}
-          />
-          <Button 
-            type="primary"
-            shape="circle"
-            size="small"
-            style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
-            icon={<IconDelete />}
-            onClick={() => handleDelete(record)}
-          />
-        </Space>
-      ),
+      render: (_: any, record: any) => {
+        const isUploaded = Number(record.submitFlag) === 1
+        
+        if (isUploaded) {
+          // 已上传状态：查看详情、删除、撤回
+          return (
+            <Space size="small">
+              <Button 
+                type="primary"
+                shape="circle"
+                size="small"
+                style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
+                icon={<IconEye />}
+                onClick={() => handleViewDetail(record)}
+              />
+              <Button 
+                type="primary"
+                shape="circle"
+                size="small"
+                style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
+                icon={<IconDelete />}
+                onClick={() => handleDelete(record)}
+              />
+              <Button 
+                type="primary"
+                shape="circle"
+                size="small"
+                style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
+                icon={<IconRefresh />}
+                onClick={() => handleWithdraw(record)}
+              />
+            </Space>
+          )
+        }
+        
+        // 编辑中状态：查看详情、编辑、复制、上传、删除
+        return (
+          <Space size="small">
+            <Button 
+              type="primary"
+              shape="circle"
+              size="small"
+              style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
+              icon={<IconEye />}
+              onClick={() => handleViewDetail(record)}
+            />
+            <Button 
+              type="primary"
+              shape="circle" 
+              size="small"
+              style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
+              icon={<IconEdit />}
+              onClick={() => handleEdit(record)}
+            />
+            <Button 
+              type="primary"
+              shape="circle"
+              size="small"
+              style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
+              icon={<IconCopy />}
+              onClick={() => handleCopy(record)}
+            />
+            <Button 
+              type="primary"
+              shape="circle"
+              size="small"
+              style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
+              icon={<IconUpload />}
+              onClick={() => handleUpload(record)}
+            />
+            <Button 
+              type="primary"
+              shape="circle"
+              size="small"
+              style={{ backgroundColor: '#722ED1', borderColor: '#722ED1' }}
+              icon={<IconDelete />}
+              onClick={() => handleDelete(record)}
+            />
+          </Space>
+        )
+      },
     }
 
     return [...commonColumns, ...specificColumns, statusColumn, uploadTipColumn, operationColumn]
@@ -328,47 +388,51 @@ function GeologyForecastPage() {
   }
 
   // 操作处理函数
-  const handleViewDetail = async (record: any) => {
-    try {
-      let detail = null;
-      const recordId = String(record.wtfPk || record.zzmsmPk || record.dssmPk || record.ztfPk || record.id);
-      
-      // 根据当前选项卡调用对应的详情API
-      switch (activeTab) {
-        case 'geophysical':
-          detail = await apiAdapter.getGeophysicalDetail(recordId);
-          break;
-        case 'palmSketch':
-          detail = await apiAdapter.getPalmSketchDetail(recordId);
-          break;
-        case 'tunnelSketch':
-          detail = await apiAdapter.getTunnelSketchDetail(recordId);
-          break;
-        case 'drilling':
-          detail = await apiAdapter.getDrillingDetail(recordId);
-          break;
-        default:
-          Message.info('暂不支持该类型的详情查看');
-          return;
-      }
-      
-      if (detail) {
-        Modal.info({
-          title: '详情信息',
-          content: (
-            <div>
-              <pre>{JSON.stringify(detail, null, 2)}</pre>
-            </div>
-          ),
-          style: { width: 600 }
-        });
-      } else {
-        Message.error('获取详情失败');
-      }
-    } catch (error) {
-      console.error('查看详情失败:', error);
-      Message.error('查看详情失败');
+  const handleViewDetail = (record: any) => {
+    console.log('🔍 [查看详情] 完整记录数据:', record);
+    
+    // 根据不同类型使用不同的主键字段
+    let recordId = '';
+    if (activeTab === 'geophysical') {
+      // 物探法：使用ybPk
+      recordId = String(record.ybPk || record.ybId || record.ybpk || record.ybID || '');
+    } else if (activeTab === 'palmSketch') {
+      recordId = String(record.zzmsmPk || record.ybPk || record.id);
+    } else if (activeTab === 'tunnelSketch') {
+      recordId = String(record.dssmPk || record.ybPk || record.id);
+    } else if (activeTab === 'drilling') {
+      recordId = String(record.ztfPk || record.ybPk || record.id);
+    } else if (activeTab === 'surface') {
+      // 地表补充：列表返回YbInfoVO，使用ybPk作为主键
+      recordId = String(record.ybPk || record.ybId || record.dbbcPk || record.id);
+      console.log('🔍 [查看详情] 地表补充 - ybPk:', record.ybPk, 'ybId:', record.ybId, '最终ID:', recordId);
+    } else {
+      recordId = String(record.id);
     }
+    
+    const method = record.method;
+    
+    if (!recordId) {
+      Message.error('缺少记录ID，无法打开详情');
+      return;
+    }
+    
+    // 确保record中有siteId
+    const recordSiteId = record.siteId || siteId;
+    
+    console.log('🔍 [查看详情] 跳转参数:', {
+      type: activeTab,
+      id: recordId,
+      method,
+      siteId: recordSiteId
+    });
+    
+    // 导航到详情页面
+    // 路径: /forecast/geology/detail/:type/:id
+    // Query: ?method=...&siteId=...
+    navigate(`/forecast/geology/detail/${activeTab}/${recordId}?method=${method}&siteId=${recordSiteId}`, {
+      state: { record }
+    });
   }
 
   const handleEdit = (record: any) => {
@@ -390,6 +454,10 @@ function GeologyForecastPage() {
       recordId = String(record.dssmPk || record.ybPk || record.id);
     } else if (activeTab === 'drilling') {
       recordId = String(record.ztfPk || record.ybPk || record.id);
+    } else if (activeTab === 'surface') {
+      // 地表补充：列表返回YbInfoVO，使用ybPk作为主键
+      recordId = String(record.ybPk || record.ybId || record.dbbcPk || record.id);
+      console.log('🔍 [编辑] 地表补充 - ybPk:', record.ybPk, 'ybId:', record.ybId, '最终ID:', recordId);
     } else {
       recordId = String(record.id);
     }
@@ -447,7 +515,7 @@ function GeologyForecastPage() {
 
   const handleUpload = async (record: any) => {
     try {
-      const recordId = String(record.wtfPk || record.zzmsmPk || record.dssmPk || record.ztfPk || record.id);
+      const recordId = String(record.wtfPk || record.zzmsmPk || record.dssmPk || record.ztfPk || record.ybPk || record.id);
       let result = null;
       
       // 根据当前选项卡调用对应的上传API
@@ -458,6 +526,7 @@ function GeologyForecastPage() {
         case 'palmSketch':
         case 'tunnelSketch':
         case 'drilling':
+        case 'surface':
           Message.info('该类型暂不支持上传功能');
           return;
         default:
@@ -475,6 +544,35 @@ function GeologyForecastPage() {
       console.error('上传失败:', error);
       Message.error('上传失败');
     }
+  }
+
+  // 撤回已上传的数据
+  const handleWithdraw = (record: any) => {
+    const recordId = String(record.wtfPk || record.zzmsmPk || record.dssmPk || record.ztfPk || record.ybPk || record.id);
+    const methodName = METHOD_MAP[record.method] || `ID: ${recordId}`;
+    
+    Modal.confirm({
+      title: '确认撤回',
+      content: `确定要撤回这条预报记录"${methodName}"吗？撤回后数据将变为编辑中状态。`,
+      okText: '确认撤回',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          // 调用撤回API，将submitFlag设置为0
+          const result = await apiAdapter.withdrawForecast(activeTab, recordId, record);
+          
+          if (result?.success) {
+            Message.success('撤回成功');
+            fetchMethodData(); // 刷新数据
+          } else {
+            Message.error('撤回失败');
+          }
+        } catch (error) {
+          console.error('撤回失败:', error);
+          Message.error('撤回失败');
+        }
+      }
+    })
   }
 
   const handleDelete = (record: any) => {
@@ -558,14 +656,13 @@ function GeologyForecastPage() {
     }
     
     // Filter by Status (editing/uploaded)
-    // submitFlag: 0=editing, 1=uploaded
+    // submitFlag: 0=编辑中, 1=已上传
+    // 如果submitFlag为undefined，默认当作编辑中(0)处理
     if (filterStatus && filterStatus !== 'all') {
        const targetFlag = filterStatus === 'editing' ? 0 : 1;
        result = result.filter(item => {
-         if (item.submitFlag !== undefined) {
-            return Number(item.submitFlag) === targetFlag;
-         }
-         return true;
+         const itemFlag = item.submitFlag !== undefined ? Number(item.submitFlag) : 0;
+         return itemFlag === targetFlag;
        });
     }
     
@@ -728,7 +825,7 @@ function GeologyForecastPage() {
               }}
               columns={getColumns('geophysical')}
               data={getFilteredData(geophysicalData)}
-              rowKey="wtfPk"
+              rowKey={(record) => String(record.wtfPk || record.ybPk || record.id || Math.random())}
               pagination={{
                 total: getFilteredData(geophysicalData).length,
                 pageSize: pageSize,
@@ -751,7 +848,7 @@ function GeologyForecastPage() {
               }}
               columns={getColumns('palmSketch')}
               data={getFilteredData(palmSketchData)}
-              rowKey="zzmsmPk"
+              rowKey={(record) => String(record.zzmsmPk || record.ybPk || record.id || Math.random())}
               pagination={{
                 total: getFilteredData(palmSketchData).length,
                 pageSize: pageSize,
@@ -774,7 +871,7 @@ function GeologyForecastPage() {
               }}
               columns={getColumns('tunnelSketch')}
               data={getFilteredData(tunnelSketchData)}
-              rowKey="dssmPk"
+              rowKey={(record) => String(record.dssmPk || record.ybPk || record.id || Math.random())}
               pagination={{
                 total: getFilteredData(tunnelSketchData).length,
                 pageSize: pageSize,
@@ -797,7 +894,7 @@ function GeologyForecastPage() {
               }}
               columns={getColumns('drilling')}
               data={getFilteredData(drillingData)}
-              rowKey="ztfPk"
+              rowKey={(record) => String(record.ztfPk || record.ybPk || record.id || Math.random())}
               pagination={{
                 total: getFilteredData(drillingData).length,
                 pageSize: pageSize,
@@ -812,15 +909,26 @@ function GeologyForecastPage() {
           )}
           
           {activeTab === 'surface' && (
-            <div style={{ padding: '24px' }}>
-              {surfaceData && surfaceData.length > 0 ? (
-                <div>
-                  <pre>{JSON.stringify(surfaceData, null, 2)}</pre>
-                </div>
-              ) : (
-                <Empty description="暂无地表补充数据" />
-              )}
-            </div>
+            <Table
+              rowSelection={{
+                type: 'checkbox',
+                selectedRowKeys,
+                onChange: (selectedRowKeys) => setSelectedRowKeys(selectedRowKeys as string[]),
+              }}
+              columns={getColumns('surface')}
+              data={getFilteredData(surfaceData || [])}
+              rowKey={(record) => String(record.ybPk || record.ybId || record.dbbcPk || record.id || Math.random())}
+              pagination={{
+                total: getFilteredData(surfaceData || []).length,
+                pageSize: pageSize,
+                current: page,
+                onChange: (page, pageSize) => {
+                  setPage(page)
+                  setPageSize(pageSize)
+                }
+              }}
+              noDataElement={<Empty description="暂无地表补充数据" />}
+            />
           )}
         </Spin>
       </div>

@@ -28,6 +28,7 @@ const WorkPointList: React.FC<WorkPointListProps> = ({
   const [palmSketchDataMap, setPalmSketchDataMap] = useState<Record<string, any[]>>({});
   const [tunnelSketchDataMap, setTunnelSketchDataMap] = useState<Record<string, any[]>>({});
   const [drillingDataMap, setDrillingDataMap] = useState<Record<string, any[]>>({});
+  const [surfaceDataMap, setSurfaceDataMap] = useState<Record<string, any[]>>({});
   
   const [loadingDetectionMap, setLoadingDetectionMap] = useState<Record<string, boolean>>({});
   const [loadingForecastMap, setLoadingForecastMap] = useState<Record<string, boolean>>({});
@@ -51,17 +52,23 @@ const WorkPointList: React.FC<WorkPointListProps> = ({
           setLoadingDetectionMap(prev => ({ ...prev, [workPointId]: false }));
         });
 
-      // 2. 加载预报方法数据
+      // 2. 加载预报方法数据 - 只显示已上传的数据 (submitFlag === 1)
       Promise.all([
-        apiAdapter.getGeophysicalList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
-        apiAdapter.getPalmSketchList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
-        apiAdapter.getTunnelSketchList({ pageNum: 1, pageSize: 10, siteId: workPointId }),
-        apiAdapter.getDrillingList({ pageNum: 1, pageSize: 10, siteId: workPointId })
-      ]).then(([geophysical, palmSketch, tunnelSketch, drilling]) => {
-        setGeophysicalDataMap(prev => ({ ...prev, [workPointId]: geophysical.records || [] }));
-        setPalmSketchDataMap(prev => ({ ...prev, [workPointId]: palmSketch.records || [] }));
-        setTunnelSketchDataMap(prev => ({ ...prev, [workPointId]: tunnelSketch.records || [] }));
-        setDrillingDataMap(prev => ({ ...prev, [workPointId]: drilling.records || [] }));
+        apiAdapter.getGeophysicalList({ pageNum: 1, pageSize: 100, siteId: workPointId }),
+        apiAdapter.getPalmSketchList({ pageNum: 1, pageSize: 100, siteId: workPointId }),
+        apiAdapter.getTunnelSketchList({ pageNum: 1, pageSize: 100, siteId: workPointId }),
+        apiAdapter.getDrillingList({ pageNum: 1, pageSize: 100, siteId: workPointId }),
+        apiAdapter.getSurfaceSupplementList({ pageNum: 1, pageSize: 100, siteId: workPointId })
+      ]).then(([geophysical, palmSketch, tunnelSketch, drilling, surface]) => {
+        // 过滤只显示已上传的数据 (submitFlag === 1)
+        const filterUploaded = (records: any[]) => 
+          (records || []).filter(item => Number(item.submitFlag) === 1);
+        
+        setGeophysicalDataMap(prev => ({ ...prev, [workPointId]: filterUploaded(geophysical.records) }));
+        setPalmSketchDataMap(prev => ({ ...prev, [workPointId]: filterUploaded(palmSketch.records) }));
+        setTunnelSketchDataMap(prev => ({ ...prev, [workPointId]: filterUploaded(tunnelSketch.records) }));
+        setDrillingDataMap(prev => ({ ...prev, [workPointId]: filterUploaded(drilling.records) }));
+        setSurfaceDataMap(prev => ({ ...prev, [workPointId]: filterUploaded(surface.records) }));
       }).catch(err => {
         console.error('加载预报方法数据失败:', err);
       }).finally(() => {
@@ -106,6 +113,7 @@ const WorkPointList: React.FC<WorkPointListProps> = ({
             const palmSketchData = palmSketchDataMap[item.id] || [];
             const tunnelSketchData = tunnelSketchDataMap[item.id] || [];
             const drillingData = drillingDataMap[item.id] || [];
+            const surfaceData = surfaceDataMap[item.id] || [];
             
             const isLoadingDetection = loadingDetectionMap[item.id] || false;
             const isLoadingForecast = loadingForecastMap[item.id] || false;
@@ -168,6 +176,7 @@ const WorkPointList: React.FC<WorkPointListProps> = ({
                   palmSketchData={palmSketchData}
                   tunnelSketchData={tunnelSketchData}
                   drillingData={drillingData}
+                  surfaceData={surfaceData}
                   onNavigate={onNavigate}
                 />
               </CollapseItem>

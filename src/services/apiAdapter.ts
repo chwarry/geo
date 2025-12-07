@@ -143,11 +143,11 @@ class APIAdapter {
     const pageNum = params?.page;
     const pageSize = params?.pageSize;
 
-    // 目前后端按 sitePk（工点ID）分页，这里简单将 workPointId 透传/忽略，主要为了前端展示
+    // 使用真实的设计围岩接口，按工点ID过滤
     const result: any = await this.getDesignRockGrades({
+      siteId: workPointId,
       pageNum,
-      pageSize,
-      // TODO: 如果后端需要按 sitePk 过滤，可在这里把 workPointId 转成数字传递
+      pageSize
     });
 
     const records = result.records || [];
@@ -181,10 +181,9 @@ class APIAdapter {
 
     // 使用真实的设计地质接口
     const result: any = await this.getDesignGeologies({
+      siteId: workPointId,
       pageNum,
-      pageSize,
-      // 如果需要按工点过滤，可以传入 sitePk
-      // sitePk: parseInt(workPointId) // 如果 workPointId 是数字字符串
+      pageSize
     });
 
     const records = result.records || [];
@@ -350,9 +349,9 @@ class APIAdapter {
   /**
    * 获取设计围岩等级列表
    */
-  async getDesignRockGrades(params?: { sitePk?: number; pageNum?: number; pageSize?: number }) {
+  async getDesignRockGrades(params: { siteId: string; pageNum?: number; pageSize?: number; wydj?: number; begin?: string; end?: string }) {
     if (USE_REAL_API) {
-      return realAPI.getDesignRockGrades(params || {});
+      return realAPI.getDesignRockGrades(params);
     } else {
       // Mock实现
       return this.generateMockRockGrades(params);
@@ -400,9 +399,9 @@ class APIAdapter {
   /**
    * 获取设计地质信息列表
    */
-  async getDesignGeologies(params?: { sitePk?: number; pageNum?: number; pageSize?: number }) {
+  async getDesignGeologies(params: { siteId: string; pageNum?: number; pageSize?: number; method?: number; begin?: string; end?: string }) {
     if (USE_REAL_API) {
-      return realAPI.getDesignGeologies(params || {});
+      return realAPI.getDesignGeologies(params);
     } else {
       // Mock实现
       return this.generateMockGeologies(params);
@@ -1005,6 +1004,54 @@ class APIAdapter {
     }
   }
 
+  // 更新地表补充信息
+  async updateSurfaceSupplement(id: string, data: any) {
+    if (USE_REAL_API) {
+      const result = await realAPI.updateSurfaceSupplement(id, data);
+      console.log('🔍 [apiAdapter] updateSurfaceSupplement 真实API结果:', result);
+      return result;
+    } else {
+      return { success: true };
+    }
+  }
+
+  // 删除地表补充信息
+  async deleteSurfaceSupplement(id: string) {
+    if (USE_REAL_API) {
+      const result = await realAPI.deleteSurfaceSupplement(id);
+      console.log('🔍 [apiAdapter] deleteSurfaceSupplement 真实API结果:', result);
+      return result;
+    } else {
+      return { success: true };
+    }
+  }
+
+  // 撤回预报数据（将submitFlag从1改为0）
+  async withdrawForecast(type: string, id: string, data: any) {
+    if (USE_REAL_API) {
+      // 将submitFlag设置为0表示撤回
+      const withdrawData = { ...data, submitFlag: 0 };
+      console.log('🔄 [apiAdapter] withdrawForecast 撤回数据:', { type, id, withdrawData });
+      
+      switch (type) {
+        case 'geophysical':
+          return realAPI.updateGeophysicalMethod(id, withdrawData, data.method?.toString());
+        case 'palmSketch':
+          return realAPI.updateFaceSketch(id, withdrawData);
+        case 'tunnelSketch':
+          return realAPI.updateTunnelSketch(id, withdrawData);
+        case 'drilling':
+          return realAPI.updateDrillingMethod(id, withdrawData);
+        case 'surface':
+          return realAPI.updateSurfaceSupplement(id, withdrawData);
+        default:
+          return { success: false, message: '不支持的类型' };
+      }
+    } else {
+      return { success: true };
+    }
+  }
+
   // ========== 五种方法的CRUD操作 ==========
 
   // 物探法操作
@@ -1013,6 +1060,18 @@ class APIAdapter {
       return realAPI.getGeophysicalMethodDetail(parseInt(id));
     } else {
       return { id, method: '地质雷达', details: 'Mock详情数据' };
+    }
+  }
+
+  /**
+   * 按方法代码与 ybPk 获取物探法详情
+   * method: 1=TSP, 2=HSP, 3=LDSN, 4=DCBFS, 5=GFBZLD, 6=SBDC, 9=WZJC
+   */
+  async getGeophysicalDetailByMethod(method: number | string, ybPk: string) {
+    if (USE_REAL_API) {
+      return realAPI.getGeophysicalDetailByMethod(method, ybPk);
+    } else {
+      return { method, ybPk, details: 'Mock详情数据' };
     }
   }
 
@@ -1031,6 +1090,24 @@ class APIAdapter {
       return { success: true };
     }
   }
+
+  /**
+   * 获取掌子面素描详情
+   */
+  async getPalmSketchDetail(id: string) {
+    if (USE_REAL_API) {
+      return realAPI.getFaceSketchDetail(parseInt(id));
+    } else {
+      return { id, details: 'Mock掌子面素描详情' };
+    }
+  }
+
+  /**
+   * 获取洞身素描详情
+   */
+  
+
+  
 
   async copyGeophysical(id: string) {
     if (USE_REAL_API) {
@@ -1058,19 +1135,7 @@ class APIAdapter {
     }
   }
 
-  // 掌子面素描操作
-  async getPalmSketchDetail(id: string) {
-    console.log('🔍 [apiAdapter] getPalmSketchDetail 调用, id:', id, 'USE_REAL_API:', USE_REAL_API);
-    if (USE_REAL_API) {
-      const parsedId = parseInt(id);
-      console.log('🔍 [apiAdapter] getPalmSketchDetail 解析后的ID:', parsedId);
-      const result = await realAPI.getFaceSketchDetail(parsedId);
-      console.log('🔍 [apiAdapter] getPalmSketchDetail 结果:', result);
-      return result;
-    } else {
-      return { id, method: '掌子面素描', details: 'Mock详情数据' };
-    }
-  }
+  // 掌子面素描操作（保留上方 getPalmSketchDetail 简版实现）
 
   async updatePalmSketch(id: string, data: any): Promise<{ success: boolean; message?: string }> {
     if (USE_REAL_API) {
@@ -1114,12 +1179,12 @@ class APIAdapter {
     }
   }
 
-  // 钻探法操作
+  // 钻探法操作（保留后部正式版 getDrillingDetail，避免重复）
   async getDrillingDetail(id: string, method?: string | null) {
     if (USE_REAL_API) {
       return realAPI.getDrillingMethodDetail(parseInt(id), method);
     } else {
-      return { id, method: '钻探法', details: 'Mock详情数据' };
+      return { id, method, details: 'Mock钻探详情' };
     }
   }
 

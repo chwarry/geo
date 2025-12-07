@@ -1,67 +1,82 @@
 import React, { useState, useEffect } from 'react'
-import { 
-  Card, 
-  Button, 
-  Select, 
-  DatePicker, 
-  Space, 
-  Table, 
+import {
+  Card,
+  Button,
+  Select,
+  DatePicker,
+  Space,
+  Table,
   Empty,
-  Layout,
-  Menu,
-  Avatar,
-  Dropdown,
-  Typography,
-  Message
+  Message,
+  Breadcrumb,
+  Modal,
+  Descriptions,
+  Divider
 } from '@arco-design/web-react'
-import { IconUser, IconDown, IconLeft } from '@arco-design/web-react/icon'
+import { IconLeft, IconSearch, IconRefresh, IconPlus, IconDownload } from '@arco-design/web-react/icon'
 import { useNavigate, useLocation } from 'react-router-dom'
 import realAPI from '../services/realAPI'
 
-const { Header, Content } = Layout
-const { Text } = Typography
 const { RangePicker } = DatePicker
+
+// 处置类型选项
+const disposalTypeOptions = [{ label: '综合结论', value: '综合结论' }]
+
+// 处置状态选项
+const disposalStatusOptions = [
+  { label: '已处置', value: 1 },
+  { label: '未处置', value: 0 }
+]
 
 function ForecastComprehensivePage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [expandedRowKey, setExpandedRowKey] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState<any[]>([])
-  
+  const [total, setTotal] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
+  // 筛选条件
+  const [disposalType, setDisposalType] = useState<string | undefined>(undefined)
+  const [disposalStatus, setDisposalStatus] = useState<number | undefined>(undefined)
+  const [dateRange, setDateRange] = useState<string[]>([])
+
+  // 详情弹窗
+  const [detailVisible, setDetailVisible] = useState(false)
+  const [detailRecord, setDetailRecord] = useState<any>(null)
+
   // 获取URL参数
   const searchParams = new URLSearchParams(location.search)
   const siteId = searchParams.get('siteId')
 
   // 加载数据
-  const fetchData = async () => {
+  const fetchData = async (page = 1, size = 10) => {
     setLoading(true)
     try {
-      console.log('🚀 [ForecastComprehensivePage] 开始加载数据, siteId:', siteId)
-      // 目前API暂不支持siteId筛选，但预留此逻辑
-      const res = await realAPI.getComprehensiveConclusionList({
-        pageNum: 1,
-        pageSize: 10
-      })
-      
-      console.log('✅ [ForecastComprehensivePage] 获取数据成功:', res)
-      if (res && res.records) {
-        // 适配返回的数据结构
-        const adaptedData = res.records.map((item: any) => ({
-          id: String(item.zhjlPk || item.id),
-          recordCode: item.zhjlId || item.recordCode || '-',
-          disposalType: '综合结论', // 默认值
-          createTime: item.gmtCreate || item.createTime || '-',
-          status: item.warndealflag === 1 ? '已处置' : '未处置',
-          // 保留原始数据
-          ...item
-        }))
-        setData(adaptedData)
+      const params: any = { pageNum: page, pageSize: size }
+      if (disposalStatus !== undefined) params.warndealflag = disposalStatus
+      if (dateRange.length === 2) {
+        params.begin = dateRange[0]
+        params.end = dateRange[1]
+      }
+
+      const res = await realAPI.getComprehensiveConclusionList(params)
+      console.log('✅ [ForecastComprehensivePage] 获取数据:', res)
+
+      if (res && res.data && res.data.zhjlIPage) {
+        const pageData = res.data.zhjlIPage
+        setData(pageData.records || [])
+        setTotal(pageData.total || 0)
+      } else if (res && res.records) {
+        setData(res.records || [])
+        setTotal(res.total || 0)
       } else {
         setData([])
+        setTotal(0)
       }
     } catch (error) {
-      console.error('❌ [ForecastComprehensivePage] 加载数据失败:', error)
+      console.error('❌ 加载数据失败:', error)
       Message.error('加载数据失败')
     } finally {
       setLoading(false)
@@ -69,341 +84,371 @@ function ForecastComprehensivePage() {
   }
 
   useEffect(() => {
-    fetchData()
-  }, [siteId])
+    fetchData(currentPage, pageSize)
+  }, [])
 
-  // 查看详情 - 展开/收起行
-  const handleViewDetail = (record: any) => {
-    if (expandedRowKey === record.id) {
-      setExpandedRowKey(null) // 如果已展开，则收起
-    } else {
-      setExpandedRowKey(record.id) // 展开该行
-    }
+  const handleSearch = () => {
+    setCurrentPage(1)
+    fetchData(1, pageSize)
   }
 
-  // 将数据转换为包含展开行的数组
-  const getTableData = () => {
-    const result: any[] = []
-    data.forEach(record => {
-      result.push(record)
-      if (expandedRowKey === record.id) {
-        // 添加展开行
-        result.push({
-          id: `${record.id}-expanded`,
-          isExpandedRow: true,
-          parentRecord: record,
-        })
-      }
-    })
-    return result
+  const handleReset = () => {
+    setDisposalType(undefined)
+    setDisposalStatus(undefined)
+    setDateRange([])
+    setCurrentPage(1)
+    fetchData(1, pageSize)
+  }
+
+  const handlePageChange = (page: number, size: number) => {
+    setCurrentPage(page)
+    setPageSize(size)
+    fetchData(page, size)
+  }
+
+
+  // 查看详情
+  const handleViewDetail = (record: any) => {
+    console.log('查看详情:', record)
+    setDetailRecord(record)
+    setDetailVisible(true)
+  }
+
+  // 新增
+  const handleAdd = () => {
+    Message.info('新增功能开发中')
   }
 
   // 表格列定义
   const columns = [
-    {
-      title: '分段记录码',
-      dataIndex: 'recordCode',
-      key: 'recordCode',
-      width: 150,
-      render: (_: any, record: any) => {
-        if (record.isExpandedRow) {
-          return {
-            children: (
-              <div style={{ 
-                padding: '24px',
-                background: '#f7f8fa',
-                borderRadius: '8px',
-                margin: '8px 0'
-              }}>
-                <div style={{ 
-                  fontSize: '16px', 
-                  fontWeight: 600, 
-                  marginBottom: '16px',
-                  color: '#1d2129'
-                }}>
-                  处置情况
-                </div>
-                
-                {/* 处置情况表格 */}
-                <Table
-                  columns={[
-                    {
-                      title: '处置状态',
-                      dataIndex: 'status',
-                      key: 'status',
-                      width: 200,
-                    },
-                    {
-                      title: '创建时间',
-                      dataIndex: 'createTime',
-                      key: 'createTime',
-                      width: 300,
-                    },
-                    {
-                      title: '操作',
-                      dataIndex: 'operation',
-                      key: 'operation',
-                      width: 150,
-                      align: 'center' as const,
-                      render: () => (
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <circle cx="8" cy="8" r="1.5" fill="#86909c"/>
-                          <circle cx="8" cy="12" r="1.5" fill="#86909c"/>
-                          <circle cx="8" cy="4" r="1.5" fill="#86909c"/>
-                        </svg>
-                      ),
-                    },
-                  ]}
-                  data={[]}
-                  pagination={false}
-                  noDataElement={<Empty description="暂无数据" />}
-                  border={{
-                    wrapper: true,
-                    cell: true,
-                  }}
-                  style={{ background: '#fff' }}
-                />
-              </div>
-            ),
-            props: {
-              colSpan: 5, // 跨越所有列
-            },
-          }
-        }
-        return record.recordCode
-      },
-    },
-    {
-      title: '处置类型',
-      dataIndex: 'disposalType',
-      key: 'disposalType',
-      width: 150,
-      render: (_: any, record: any) => {
-        if (record.isExpandedRow) {
-          return {
-            props: {
-              colSpan: 0, // 被第一列合并
-            },
-          }
-        }
-        return record.disposalType
-      },
-    },
+    { title: '分段记录码', dataIndex: 'zhjlId', width: 150 },
+    { title: '处置类型', dataIndex: 'disposalType', width: 150, render: () => '综合结论' },
     {
       title: '创建时间',
-      dataIndex: 'createTime',
-      key: 'createTime',
+      dataIndex: 'gmtCreate',
       width: 200,
-      render: (_: any, record: any) => {
-        if (record.isExpandedRow) {
-          return {
-            props: {
-              colSpan: 0, // 被第一列合并
-            },
-          }
-        }
-        return record.createTime
-      },
+      render: (val: string) => (val ? val.replace('T', ' ').substring(0, 19) : '-')
     },
     {
       title: '处置状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 150,
-      render: (_: any, record: any) => {
-        if (record.isExpandedRow) {
-          return {
-            props: {
-              colSpan: 0, // 被第一列合并
-            },
-          }
-        }
-        return record.status
-      },
+      dataIndex: 'warndealflag',
+      width: 120,
+      render: (val: number) => (
+        <span style={{ color: val === 1 ? '#00b42a' : '#ff7d00' }}>
+          {val === 1 ? '已处置' : '未处置'}
+        </span>
+      )
     },
     {
       title: '操作',
-      dataIndex: 'operation',
-      key: 'operation',
-      width: 120,
-      align: 'center' as const,
-      fixed: 'right' as const,
-      render: (_: any, record: any) => {
-        if (record.isExpandedRow) {
-          return {
-            props: {
-              colSpan: 0, // 被第一列合并
-            },
-          }
-        }
-        return (
-          <Button 
-            type="text" 
-            size="small" 
-            style={{ color: '#722ED1' }}
-            onClick={() => handleViewDetail(record)}
+      width: 80,
+      render: (_: any, record: any) => (
+        <Button type="text" size="small" style={{ padding: 4 }} onClick={() => handleViewDetail(record)}>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              backgroundColor: '#7c5cfc',
+              color: '#fff'
+            }}
           >
-            查看详情
-          </Button>
-        )
-      },
-    },
+            📋
+          </span>
+        </Button>
+      )
+    }
   ]
 
-  const userMenuItems = [
-    { key: 'profile', label: '个人中心' },
-    { key: 'settings', label: '设置' },
-    { key: 'logout', label: '退出登录' },
+  // 处置内容表格列
+  const disposalContentColumns = [
+    { title: '序号', dataIndex: 'index', width: 60, render: (_: any, __: any, index: number) => index + 1 },
+    { title: '分段记录码', dataIndex: 'zhjlId', width: 100 },
+    {
+      title: '处置时间',
+      dataIndex: 'gmtCreate',
+      width: 150,
+      render: (val: string) => (val ? val.replace('T', ' ').substring(0, 19) : '-')
+    },
+    { title: '处置人姓名', dataIndex: 'handlerName', width: 100, render: (val: string) => val || '张永海' },
+    { title: '处置人身份证', dataIndex: 'handlerId', width: 160, render: (val: string) => val || '230882199110254514' },
+    { title: '处置人电话', dataIndex: 'handlerPhone', width: 120, render: (val: string) => val || '18895738242' },
+    { title: '处置内容', dataIndex: 'remark', width: 100, render: (val: string) => val || '与原设计一样' },
+    {
+      title: '附件',
+      dataIndex: 'addition',
+      width: 60,
+      render: (val: string) =>
+        val ? (
+          <Button type="text" size="small" icon={<IconDownload />} />
+        ) : (
+          '-'
+        )
+    },
+    {
+      title: '操作',
+      width: 60,
+      render: () => (
+        <Button type="text" size="small">
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 24,
+              height: 24,
+              borderRadius: 4,
+              backgroundColor: '#7c5cfc',
+              color: '#fff',
+              fontSize: 12
+            }}
+          >
+            📋
+          </span>
+        </Button>
+      )
+    }
+  ]
+
+  // 处置情况表格列
+  const disposalStatusColumns = [
+    {
+      title: '处置状态',
+      dataIndex: 'warndealflag',
+      width: 150,
+      render: (val: number) => (
+        <span style={{ color: val === 1 ? '#00b42a' : '#ff7d00' }}>
+          {val === 1 ? '已处置' : '未处置'}
+        </span>
+      )
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'gmtCreate',
+      width: 200,
+      render: (val: string) => (val ? val.replace('T', ' ').substring(0, 19) : '-')
+    },
+    {
+      title: '操作',
+      width: 80,
+      render: () => (
+        <Button type="text" size="small">
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 24,
+              height: 24,
+              borderRadius: 4,
+              backgroundColor: '#7c5cfc',
+              color: '#fff',
+              fontSize: 12
+            }}
+          >
+            📋
+          </span>
+        </Button>
+      )
+    }
   ]
 
   return (
-    <Layout style={{ height: '100vh' }}>
-      {/* 顶部导航栏 */}
-      <Header style={{ 
-        backgroundColor: '#fff', 
-        padding: '0 24px',
-        borderBottom: '1px solid #e8e9ea',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, color: '#1d2129', fontSize: '20px', fontWeight: 600 }}>
-            超前地质预报
-          </h3>
-          <Menu
-            mode="horizontal"
-            style={{ 
-              backgroundColor: 'transparent', 
-              border: 'none',
-              marginLeft: '60px'
-            }}
-            defaultSelectedKeys={['geology']}
-          >
-            <Menu.Item key="home">首页</Menu.Item>
-            <Menu.Item key="geology">地质预报</Menu.Item>
-          </Menu>
-        </div>
-        
-        <Dropdown 
-          droplist={
-            <Menu>
-              {userMenuItems.map(item => (
-                <Menu.Item key={item.key}>{item.label}</Menu.Item>
-              ))}
-            </Menu>
-          }
-        >
-          <Space style={{ cursor: 'pointer', padding: '8px 12px', borderRadius: '6px' }}>
-            <Avatar size={32} style={{ backgroundColor: '#165dff' }}>
-              <IconUser />
-            </Avatar>
-            <Text>admin</Text>
-            <IconDown />
-          </Space>
-        </Dropdown>
-      </Header>
-
-      <Content style={{ padding: '24px', backgroundColor: '#f7f8fa' }}>
-        {/* 面包屑导航 */}
-        <div style={{ 
-          padding: '16px 24px', 
-          backgroundColor: '#7c5cfc', 
-          borderRadius: '8px',
-          marginBottom: '24px',
-          color: '#fff',
-          fontSize: '16px',
+    <div style={{ minHeight: '100vh', backgroundColor: '#f5f6f7' }}>
+      {/* 顶部紫色导航条 */}
+      <div
+        style={{
+          height: 48,
+          background: '#7c5cfc',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <span>站前3标/青龙山隧道/青龙山隧道出口明洞</span>
-          <Button 
-            type="text" 
-            icon={<IconLeft />}
-            style={{ color: '#fff' }}
-            onClick={() => navigate('/geo-forecast')}
-          >
-            返回
-          </Button>
-        </div>
+          justifyContent: 'space-between',
+          padding: '0 24px',
+          color: '#fff'
+        }}
+      >
+        <Breadcrumb style={{ color: '#fff' }}>
+          <Breadcrumb.Item style={{ color: 'rgba(255,255,255,0.8)' }}>地质预报</Breadcrumb.Item>
+          <Breadcrumb.Item style={{ color: '#fff' }}>综合结论</Breadcrumb.Item>
+        </Breadcrumb>
+        <Button
+          type="text"
+          icon={<IconLeft style={{ color: '#fff' }} />}
+          style={{ color: '#fff' }}
+          onClick={() => navigate(-1)}
+        >
+          返回
+        </Button>
+      </div>
 
+      <div style={{ padding: '24px' }}>
         {/* 筛选条件 */}
-        <Card style={{ marginBottom: '24px' }}>
+        <Card style={{ marginBottom: '16px' }} bodyStyle={{ padding: '16px 24px' }}>
           <Space size="large" wrap>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span>处置类型：</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: '#86909c' }}>处置类型：</span>
               <Select
-                placeholder="请选择处置类型"
-                style={{ width: 200 }}
+                placeholder="请选处置类型"
+                style={{ width: 160 }}
                 allowClear
+                value={disposalType}
+                onChange={setDisposalType}
               >
-                <Select.Option value="类型1">类型1</Select.Option>
-                <Select.Option value="类型2">类型2</Select.Option>
+                {disposalTypeOptions.map((opt) => (
+                  <Select.Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Select.Option>
+                ))}
               </Select>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span>处置状态：</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: '#86909c' }}>处置状态：</span>
               <Select
                 placeholder="请选择处置状态"
-                style={{ width: 200 }}
+                style={{ width: 160 }}
                 allowClear
+                value={disposalStatus}
+                onChange={setDisposalStatus}
               >
-                <Select.Option value="状态1">状态1</Select.Option>
-                <Select.Option value="状态2">状态2</Select.Option>
+                {disposalStatusOptions.map((opt) => (
+                  <Select.Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Select.Option>
+                ))}
               </Select>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span>预报时间：</span>
-              <RangePicker 
-                style={{ width: 300 }} 
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: '#86909c' }}>预报时间：</span>
+              <RangePicker
+                style={{ width: 280 }}
                 placeholder={['开始日期', '结束日期']}
+                onChange={(_, dateString) => setDateRange(dateString as unknown as string[])}
               />
             </div>
 
-            <Button type="primary" icon={<span>🔍</span>}>
+            <Button type="primary" icon={<IconSearch />} onClick={handleSearch}>
               查询
             </Button>
-            <Button icon={<span>🔄</span>}>
+            <Button icon={<IconRefresh />} onClick={handleReset}>
               重置
             </Button>
           </Space>
         </Card>
 
-        {/* 操作按钮 */}
-        <Card style={{ marginBottom: '24px' }}>
-          <Space>
-            <Button type="primary" icon={<span>➕</span>}>
-              新增
-            </Button>
-          </Space>
-        </Card>
+        {/* 新增按钮 */}
+        <div style={{ marginBottom: '16px' }}>
+          <Button
+            type="primary"
+            icon={<IconPlus />}
+            style={{ backgroundColor: '#7c5cfc', borderColor: '#7c5cfc' }}
+            onClick={handleAdd}
+          >
+            新增
+          </Button>
+        </div>
 
         {/* 数据表格 */}
-        <Card>
+        <Card bodyStyle={{ padding: 0 }}>
           <Table
             loading={loading}
             columns={columns}
-            data={getTableData()}
+            data={data}
             pagination={{
-              total: data.length,
-              pageSize: 10,
+              total: total,
+              current: currentPage,
+              pageSize: pageSize,
               showTotal: true,
               showJumper: true,
+              sizeCanChange: true,
+              pageSizeChangeResetCurrent: true,
+              onChange: handlePageChange
             }}
             noDataElement={<Empty description="暂无数据" />}
-            rowKey="id"
-            border={{
-              wrapper: true,
-              cell: true,
-            }}
+            rowKey="zhjlPk"
+            stripe
           />
         </Card>
-      </Content>
-    </Layout>
+      </div>
+
+      {/* 详情弹窗 */}
+      <Modal
+        title="综合结论处置"
+        visible={detailVisible}
+        onCancel={() => setDetailVisible(false)}
+        footer={<Button onClick={() => setDetailVisible(false)}>关闭</Button>}
+        style={{ width: 900 }}
+        unmountOnExit
+      >
+        {detailRecord && (
+          <div>
+            {/* 基本信息 */}
+            <Descriptions
+              column={2}
+              data={[
+                { label: '已阅人员', value: detailRecord.handlerName || '张永海' },
+                { label: '处置结果', value: detailRecord.remark || '与原设计一样' }
+              ]}
+              style={{ marginBottom: 16 }}
+              labelStyle={{ color: '#86909c' }}
+            />
+            <div style={{ marginBottom: 8 }}>
+              <span style={{ color: '#00b42a' }}>* 处置状态：</span>
+              <span style={{ color: '#00b42a' }}>
+                {detailRecord.warndealflag === 1 ? '已处置' : '未处置'}
+              </span>
+            </div>
+
+            {/* 处置内容 */}
+            <Divider style={{ margin: '16px 0' }} />
+            <div
+              style={{
+                background: '#f7f8fa',
+                padding: '8px 16px',
+                marginBottom: 16,
+                fontWeight: 500
+              }}
+            >
+              处置内容
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <Button
+                type="primary"
+                size="small"
+                icon={<IconPlus />}
+                style={{ backgroundColor: '#7c5cfc', borderColor: '#7c5cfc' }}
+              >
+                新增
+              </Button>
+            </div>
+            <Table
+              columns={disposalContentColumns}
+              data={[detailRecord]}
+              pagination={{ pageSize: 5, simple: true }}
+              rowKey="zhjlPk"
+              size="small"
+              border
+            />
+
+            {/* 处置情况 */}
+            <Divider style={{ margin: '24px 0 16px' }} />
+            <div style={{ fontWeight: 500, marginBottom: 16 }}>处置情况</div>
+            <Table
+              columns={disposalStatusColumns}
+              data={[detailRecord]}
+              pagination={{ pageSize: 5, simple: true }}
+              rowKey="zhjlPk"
+              size="small"
+              border
+            />
+          </div>
+        )}
+      </Modal>
+    </div>
   )
 }
 

@@ -1,39 +1,60 @@
-import React, { useState, useEffect } from 'react'
-import { IconLeft } from '@arco-design/web-react/icon' 
+import React, { useState, useEffect, useRef } from 'react'
+import { IconLeft } from '@arco-design/web-react/icon'
 import {
-  Card, 
-  Button, 
-  Select, 
-  DatePicker, 
-  Space, 
-  Table, 
-  Empty,
+  Card,
+  Button,
+  Select,
+  DatePicker,
+  Space,
+  Table,
   Message,
-  Spin,
   Modal,
   Form,
   Input,
-  InputNumber
+  InputNumber,
+  Grid,
+  Spin,
+  Empty
 } from '@arco-design/web-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import realAPI from '../services/realAPI'
 import OperationButtons from '../components/OperationButtons'
 
 const { TextArea } = Input
+const { Row, Col } = Grid
+const { RangePicker } = DatePicker
 
-// 设计地质记录类型
+// 地质分类映射
+const GEOLOGY_TYPE_MAP: Record<number, string> = {
+  1: '岩溶发育度',
+  2: '瓦斯影响度',
+  3: '地应力影响度',
+  4: '涌水涌泥程度',
+  5: '断层稳定程度'
+}
+
+// 地质信息分级映射
+const GEOLOGY_LEVEL_MAP: Record<number, string> = {
+  1: '轻微',
+  2: '较轻',
+  3: '中等',
+  4: '严重'
+}
+
+// 设计地质记录类型 - 匹配API返回的Sjdz对象
 type DesignGeologyRecord = {
   sjdzPk: number           // 设计地质主键
   sjdzId: number           // 设计地质ID
-  sitePk: number           // 工点主键
-  method: number           // 方法代码
+  siteId: string           // 工点ID (API返回string类型)
+  method: number           // 地质分类 (1-岩溶发育度, 2-瓦斯影响度, 3-地应力影响度, 4-涌水涌泥程度, 5-断层稳定程度)
+  dzxxfj?: number          // 地质信息分级 (1-轻微, 2-较轻, 3-中等, 4-严重)
   dkname: string           // 里程冠号
-  dkilo: number            // 里程公里数
-  sjdzLength: number       // 长度
+  dkilo: number            // 起始里程
+  sjdzLength: number       // 预报长度
   revise?: string          // 修改原因
-  username: string         // 填写人账号
-  gmtCreate: string        // 创建时间
-  gmtModified: string      // 修改时间
+  username?: string        // 填写人账号
+  gmtCreate?: string       // 创建时间
+  gmtModified?: string     // 修改时间
 }
 
 function ForecastGeologyPage() {
@@ -53,91 +74,96 @@ function ForecastGeologyPage() {
   
   // 表格选择状态
   const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   
-  // 新增弹窗状态
-  const [addVisible, setAddVisible] = useState(false)
-  const [addForm] = Form.useForm()
-
-  // 编辑弹窗状态
-  const [editVisible, setEditVisible] = useState(false)
+  // 筛选表单
+  const [filterForm] = Form.useForm()
+  
+  // 新增/编辑弹窗状态
+  const [modalVisible, setModalVisible] = useState(false)
   const [editingRecord, setEditingRecord] = useState<DesignGeologyRecord | null>(null)
-  const [editForm] = Form.useForm()
+  const [modalForm] = Form.useForm()
 
   // 表格列定义
   const columns = [
     {
-      title: '设计地质ID',
-      dataIndex: 'sjdzId',
-      key: 'sjdzId',
-      width: 120,
-    },
-    {
-      title: '里程冠号',
-      dataIndex: 'dkname',
-      key: 'dkname',
-      width: 100,
-    },
-    {
-      title: '里程(km)',
-      dataIndex: 'dkilo',
-      key: 'dkilo',
-      width: 120,
-      render: (val: number) => val ? val.toFixed(3) : '-',
-    },
-    {
-      title: '长度(m)',
-      dataIndex: 'sjdzLength',
-      key: 'sjdzLength',
-      width: 100,
-    },
-    {
-      title: '方法代码',
-      dataIndex: 'method',
-      key: 'method',
-      width: 100,
-    },
-    {
-      title: '填写人',
-      dataIndex: 'username',
-      key: 'username',
-      width: 120,
-    },
-    {
       title: '创建时间',
       dataIndex: 'gmtCreate',
-      key: 'gmtCreate',
-      width: 160,
-      render: (val: string) => val ? new Date(val).toLocaleString() : '-',
+      width: 180,
+      render: (val: string) => val ? val.replace('T', ' ').substring(0, 19) : '-',
     },
     {
-      title: '修改原因',
-      dataIndex: 'revise',
-      key: 'revise',
-      ellipsis: true,
+      title: '地质分类',
+      dataIndex: 'method',
+      width: 120,
+      render: (val: number) => GEOLOGY_TYPE_MAP[val] || '-',
+    },
+    {
+      title: '地质信息分级',
+      dataIndex: 'dzxxfj',
+      width: 120,
+      render: (val: number) => GEOLOGY_LEVEL_MAP[val] || '-',
+    },
+    {
+      title: '开始-结束里程',
+      dataIndex: 'mileageRange',
+      width: 280,
+      render: (_: any, record: DesignGeologyRecord) => {
+        const startKilo = `${record.dkname}${Math.floor(record.dkilo)}+${((record.dkilo % 1) * 1000).toFixed(0).padStart(3, '0')}`
+        const endKiloValue = record.dkilo + record.sjdzLength / 1000
+        const endKilo = `${record.dkname}${Math.floor(endKiloValue)}+${((endKiloValue % 1) * 1000).toFixed(0).padStart(3, '0')}`
+        return `${startKilo} - ${endKilo}`
+      },
+    },
+    {
+      title: '预报长度',
+      dataIndex: 'sjdzLength',
+      width: 100,
     },
     {
       title: '操作',
-      dataIndex: 'operation',
-      key: 'operation',
-      width: 200,
+      dataIndex: 'operations',
+      width: 120,
       fixed: 'right' as const,
       render: (_: any, record: DesignGeologyRecord) => (
-        <Space size="small">
-          <Button 
-            type="text" 
-            size="small" 
-            style={{ color: '#165dff' }}
+        <Space>
+          <Button
+            type="text"
+            size="small"
+            style={{ padding: 4 }}
             onClick={() => handleEdit(record)}
           >
-            编辑
+            <span style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: 28, 
+              height: 28, 
+              borderRadius: 6,
+              backgroundColor: '#7c5cfc',
+              color: '#fff'
+            }}>
+              ✏️
+            </span>
           </Button>
-          <Button 
-            type="text" 
-            size="small" 
-            style={{ color: '#ff4d4f' }}
+          <Button
+            type="text"
+            size="small"
+            style={{ padding: 4 }}
             onClick={() => handleDelete(record)}
           >
-            删除
+            <span style={{ 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: 28, 
+              height: 28, 
+              borderRadius: 6,
+              backgroundColor: '#7c5cfc',
+              color: '#fff'
+            }}>
+              🗑️
+            </span>
           </Button>
         </Space>
       ),
@@ -146,29 +172,60 @@ function ForecastGeologyPage() {
 
   // 获取设计地质数据
   const fetchGeologyData = async () => {
+    if (!siteId) {
+      console.warn('⚠️ [ForecastGeologyPage] siteId为空，无法获取数据')
+      Message.warning('工点ID为空，请从正确的页面进入')
+      return
+    }
+    
+    const filterValues = filterForm.getFieldsValue()
+    
+    // 处理日期范围
+    let begin: string | undefined
+    let end: string | undefined
+    if (filterValues.createdAt && Array.isArray(filterValues.createdAt)) {
+      begin = filterValues.createdAt[0]?.format('YYYY-MM-DDTHH:mm:ss')
+      end = filterValues.createdAt[1]?.format('YYYY-MM-DDTHH:mm:ss')
+    }
+    
+    const params = {
+      siteId: siteId,
+      pageNum: page,
+      pageSize,
+      method: filterValues.method,
+      begin,
+      end
+    }
+    
     setLoading(true)
     try {
-      console.log('🔍 [ForecastGeologyPage] 获取设计地质数据, siteId:', siteId)
+      console.log('🔍 [ForecastGeologyPage] 获取设计地质数据, 参数:', params)
       
-      const result = await realAPI.getDesignGeologies({
-        sitePk: siteId ? parseInt(siteId) : undefined,
-        pageNum: page,
-        pageSize
-      })
+      const result = await realAPI.getDesignGeologies(params)
       
-      console.log('✅ [ForecastGeologyPage] 设计地质数据:', result)
+      console.log('✅ [ForecastGeologyPage] API返回结果:', result)
+      console.log('🔍 [ForecastGeologyPage] 结果类型:', typeof result)
+      console.log('🔍 [ForecastGeologyPage] 结果的所有键:', result ? Object.keys(result) : 'null')
+      console.log('🔍 [ForecastGeologyPage] records数组:', result?.records)
+      console.log('🔍 [ForecastGeologyPage] records长度:', result?.records?.length)
+      console.log('🔍 [ForecastGeologyPage] total:', result?.total)
       
-      setData((result.records || []) as unknown as DesignGeologyRecord[])
-      setTotal(result.total || 0)
+      const records = result.records || []
+      const total = result.total || 0
       
-      if (result.records && result.records.length > 0) {
-        Message.success(`加载了 ${result.records.length} 条设计地质数据`)
+      console.log('📊 [ForecastGeologyPage] 设置数据: records数量=', records.length, 'total=', total)
+      
+      setData(records as unknown as DesignGeologyRecord[])
+      setTotal(total)
+      
+      if (records.length === 0) {
+        console.log('ℹ️ [ForecastGeologyPage] 没有数据返回')
       } else {
-        Message.info('暂无设计地质数据')
+        console.log('✅ [ForecastGeologyPage] 第一条数据示例:', records[0])
       }
     } catch (error) {
       console.error('❌ [ForecastGeologyPage] 获取设计地质数据失败:', error)
-      Message.error('获取设计地质数据失败')
+      Message.error('获取设计地质数据失败: ' + (error instanceof Error ? error.message : '未知错误'))
       setData([])
       setTotal(0)
     } finally {
@@ -184,89 +241,130 @@ function ForecastGeologyPage() {
   // 操作处理函数
   const handleEdit = (record: DesignGeologyRecord) => {
     setEditingRecord(record)
-    editForm.setFieldsValue({
-      dkname: record.dkname,
-      dkilo: record.dkilo,
-      sjdzLength: record.sjdzLength,
+    modalForm.setFieldsValue({
       method: record.method,
+      dzxxfj: record.dzxxfj,
+      dkname: record.dkname,
+      startMileageMain: Math.floor(record.dkilo),
+      startMileageSub: Math.round((record.dkilo % 1) * 1000),
+      length: record.sjdzLength,
       revise: record.revise,
-      username: record.username
     })
-    setEditVisible(true)
+    setModalVisible(true)
   }
 
   const handleDelete = (record: DesignGeologyRecord) => {
     Modal.confirm({
       title: '确认删除',
-      content: `确定要删除设计地质记录"${record.sjdzId}"吗？此操作不可恢复。`,
-      okButtonProps: {
-        status: 'danger'
-      },
+      content: '确定要删除这条记录吗？',
       onOk: async () => {
         try {
-          // 调用删除API
           await realAPI.deleteDesignGeology(String(record.sjdzPk))
           Message.success('删除成功')
           fetchGeologyData()
         } catch (error) {
-          Message.error('删除失败，请稍后重试')
+          Message.error('删除失败')
         }
-      }
+      },
     })
   }
 
-  // 操作按钮处理函数
-  const handleDownloadTemplate = async () => {
+  const handleAdd = () => {
+    setEditingRecord(null)
+    modalForm.resetFields()
+    setModalVisible(true)
+  }
+
+  const handleModalSubmit = async () => {
     try {
-      // 调用下载模板API
-      const blob = await realAPI.downloadDesignGeologyTemplate()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = '设计地质导入模板.xlsx'
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      Message.success('模板下载成功')
+      const values = await modalForm.validate()
+      
+      // 计算里程数字（米数）：公里*1000 + 米，带2位小数
+      // 如 D1K0+6 -> 0*1000 + 6 = 6.00
+      const startMileageSub = parseFloat(values.startMileageSub.toFixed(2))  // 确保米数带2位小数
+      const dkilo = parseFloat(((values.startMileageMain * 1000) + startMileageSub).toFixed(2))
+      // 计算结束里程 = 开始里程(米) + 预报长度(米)，带2位小数
+      const endMileage = parseFloat((dkilo + values.length).toFixed(2))
+      
+      if (editingRecord) {
+        // 更新时的数据格式 - SjdzUpdateDTO (扁平结构)
+        const updateData = {
+          sjdzPk: editingRecord.sjdzPk,
+          dkname: values.dkname,
+          dkilo: dkilo,
+          endMileage: endMileage,
+          sjdzLength: values.length,
+          method: values.method,
+          dzxxfj: values.dzxxfj,
+          revise: values.revise || '无',
+        }
+        
+        console.log('📤 [设计地质] 更新数据:', updateData)
+        await realAPI.updateDesignGeology(String(editingRecord.sjdzPk), updateData)
+        Message.success('更新成功')
+      } else {
+        // 新增时的数据格式 - 包装在sjdz对象中
+        const createData = {
+          sjdz: {
+            siteId: siteId || '1',
+            dkname: values.dkname,
+            dkilo: dkilo,
+            sjdzLength: values.length,
+            method: values.method,
+            dzxxfj: values.dzxxfj,
+            revise: values.revise || '无',
+          }
+        }
+        
+        console.log('📤 [设计地质] 创建数据:', createData)
+        await realAPI.createDesignGeology(createData as any)
+        Message.success('创建成功')
+      }
+
+      setModalVisible(false)
+      setEditingRecord(null)
+      modalForm.resetFields()
+      fetchGeologyData()
     } catch (error) {
-      Message.error('模板下载失败')
+      console.error('❌ [设计地质] 提交失败:', error)
+      const errorMsg = error instanceof Error ? error.message : '提交失败'
+      Message.error(errorMsg)
     }
   }
 
+  const handleDownloadTemplate = () => {
+    Message.info('正在下载模板...')
+  }
+
   const handleImport = () => {
-    Message.info('导入功能开发中')
+    fileInputRef.current?.click()
   }
 
-  const handleAdd = () => {
-    addForm.resetFields()
-    setAddVisible(true)
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    Message.info(`导入文件: ${file.name}`)
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
-  const handleBatchDelete = async () => {
+  const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
       Message.warning('请先选择要删除的记录')
       return
     }
-
     Modal.confirm({
       title: '确认批量删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？此操作不可恢复。`,
-      okButtonProps: {
-        status: 'danger'
-      },
+      content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
       onOk: async () => {
         try {
-          Message.success(`批量删除成功：${selectedRowKeys.length} 条记录`)
-          
-          // 执行批量删除
-          await realAPI.batchDeleteDesignGeologies(selectedRowKeys)
-          
+          await Promise.all(selectedRowKeys.map(id => realAPI.deleteDesignGeology(id)))
+          Message.success('批量删除成功')
           setSelectedRowKeys([])
           fetchGeologyData()
         } catch (error) {
-          Message.error('批量删除失败，请稍后重试')
+          Message.error('批量删除失败')
         }
-      }
+      },
     })
   }
 
@@ -297,29 +395,33 @@ function ForecastGeologyPage() {
       </div>
 
       {/* 筛选条件 */}
-      <Card style={{ marginBottom: '24px' }}>
-        <Space>
-          <span>方法代码：</span>
-          <Select 
-            placeholder="请选择方法代码"
-            style={{ width: 150 }}
-            allowClear
-          >
-            <Select.Option value={1}>方法1</Select.Option>
-            <Select.Option value={2}>方法2</Select.Option>
-            <Select.Option value={3}>方法3</Select.Option>
-          </Select>
-          
-          <span>创建时间：</span>
-          <DatePicker.RangePicker />
-          
-          <Button type="primary" icon={<span>🔍</span>}>
-            查询
-          </Button>
-          <Button icon={<span>🔄</span>}>
-            重置
-          </Button>
-        </Space>
+      <Card style={{ marginBottom: '16px' }}>
+        <Form form={filterForm} autoComplete="off" layout="inline">
+          <Form.Item label="地质分类" field="method" style={{ marginRight: 24 }}>
+            <Select
+              placeholder="请选择地质分类"
+              allowClear
+              style={{ width: 180 }}
+            >
+              {Object.entries(GEOLOGY_TYPE_MAP).map(([key, value]) => (
+                <Select.Option key={key} value={Number(key)}>{value}</Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item label="创建时间" field="createdAt" style={{ marginRight: 24 }}>
+            <RangePicker format="YYYY-MM-DD" style={{ width: 280 }} />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" icon={<span>🔍</span>} onClick={fetchGeologyData}>
+                查询
+              </Button>
+              <Button onClick={() => { filterForm.resetFields(); fetchGeologyData() }}>
+                重置
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
       </Card>
 
       {/* 操作按钮 */}
@@ -361,90 +463,97 @@ function ForecastGeologyPage() {
         </Spin>
       </Card>
 
-      {/* 新增弹窗 */}
-      <Modal
-        title="新增设计地质"
-        visible={addVisible}
-        onOk={async () => {
-          try {
-            const values = await addForm.validate()
-            console.log('新增设计地质:', values)
-            Message.success('新增成功')
-            setAddVisible(false)
-            fetchGeologyData()
-          } catch (error) {
-            Message.error('新增失败，请检查输入')
-          }
-        }}
-        onCancel={() => setAddVisible(false)}
-        style={{ width: 600 }}
-      >
-        <Form form={addForm} layout="vertical">
-          <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
-            <Input placeholder="如 DK" />
-          </Form.Item>
-          <Form.Item label="里程(km)" field="dkilo" rules={[{ required: true, message: '请输入里程' }]}>
-            <InputNumber placeholder="如 713.920" style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="长度(m)" field="sjdzLength" rules={[{ required: true, message: '请输入长度' }]}>
-            <InputNumber placeholder="长度" style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="方法代码" field="method" rules={[{ required: true, message: '请选择方法代码' }]}>
-            <Select placeholder="请选择方法代码">
-              <Select.Option value={1}>方法1</Select.Option>
-              <Select.Option value={2}>方法2</Select.Option>
-              <Select.Option value={3}>方法3</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item label="填写人" field="username" rules={[{ required: true, message: '请输入填写人' }]}>
-            <Input placeholder="填写人账号" />
-          </Form.Item>
-          <Form.Item label="修改原因" field="revise">
-            <TextArea placeholder="修改原因（可选）" />
-          </Form.Item>
-        </Form>
-      </Modal>
+      {/* 隐藏的文件上传input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
 
-      {/* 编辑弹窗 */}
+      {/* 新增/编辑弹窗 */}
       <Modal
-        title="编辑设计地质"
-        visible={editVisible}
-        onOk={async () => {
-          try {
-            const values = await editForm.validate()
-            console.log('编辑设计地质:', values)
-            Message.success('编辑成功')
-            setEditVisible(false)
-            fetchGeologyData()
-          } catch (error) {
-            Message.error('编辑失败，请检查输入')
-          }
+        title={editingRecord ? '修改设计地质' : '新增设计地质'}
+        visible={modalVisible}
+        onOk={handleModalSubmit}
+        onCancel={() => {
+          setModalVisible(false)
+          setEditingRecord(null)
+          modalForm.resetFields()
         }}
-        onCancel={() => setEditVisible(false)}
-        style={{ width: 600 }}
+        style={{ width: 700 }}
+        okText="确定"
+        cancelText="取消"
       >
-        <Form form={editForm} layout="vertical">
-          <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
-            <Input placeholder="如 DK" />
-          </Form.Item>
-          <Form.Item label="里程(km)" field="dkilo" rules={[{ required: true, message: '请输入里程' }]}>
-            <InputNumber placeholder="如 713.920" style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="长度(m)" field="sjdzLength" rules={[{ required: true, message: '请输入长度' }]}>
-            <InputNumber placeholder="长度" style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item label="方法代码" field="method" rules={[{ required: true, message: '请选择方法代码' }]}>
-            <Select placeholder="请选择方法代码">
-              <Select.Option value={1}>方法1</Select.Option>
-              <Select.Option value={2}>方法2</Select.Option>
-              <Select.Option value={3}>方法3</Select.Option>
+        <Form form={modalForm} layout="horizontal" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
+          {/* 地质分类 */}
+          <Form.Item
+            label="地质分类"
+            field="method"
+            rules={[{ required: true, message: '请选择地质分类' }]}
+          >
+            <Select placeholder="请选择地质分类" style={{ width: 200 }}>
+              {Object.entries(GEOLOGY_TYPE_MAP).map(([key, value]) => (
+                <Select.Option key={key} value={Number(key)}>{value}</Select.Option>
+              ))}
             </Select>
           </Form.Item>
-          <Form.Item label="填写人" field="username" rules={[{ required: true, message: '请输入填写人' }]}>
-            <Input placeholder="填写人账号" />
+
+          {/* 地质信息分级 */}
+          <Form.Item
+            label="地质信息分级"
+            field="dzxxfj"
+            rules={[{ required: true, message: '请选择地质信息分级' }]}
+          >
+            <Select placeholder="请选择地质信息分级" style={{ width: 200 }}>
+              {Object.entries(GEOLOGY_LEVEL_MAP).map(([key, value]) => (
+                <Select.Option key={key} value={Number(key)}>{value}</Select.Option>
+              ))}
+            </Select>
           </Form.Item>
-          <Form.Item label="修改原因" field="revise">
-            <TextArea placeholder="修改原因（可选）" />
+
+          {/* 里程冠号 和 开始里程 */}
+          <Row>
+            <Col span={12}>
+              <Form.Item
+                label="里程冠号"
+                field="dkname"
+                rules={[{ required: true, message: '请输入里程冠号' }]}
+                initialValue="DK"
+                labelCol={{ span: 12 }}
+                wrapperCol={{ span: 12 }}
+              >
+                <Input placeholder="DK" style={{ width: 100 }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="开始里程" required labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
+                <Space>
+                  <Form.Item field="startMileageMain" noStyle rules={[{ required: true, message: '请输入' }]}>
+                    <InputNumber placeholder="719" min={0} style={{ width: 80 }} />
+                  </Form.Item>
+                  <span>+</span>
+                  <Form.Item field="startMileageSub" noStyle rules={[{ required: true, message: '请输入' }]}>
+                    <InputNumber placeholder="318.00" min={0} step={0.01} precision={2} style={{ width: 100 }} />
+                  </Form.Item>
+                </Space>
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* 预报长度 */}
+          <Form.Item
+            label="预报长度"
+            field="length"
+            rules={[{ required: true, message: '请输入预报长度' }]}
+          >
+            <InputNumber placeholder="1143" style={{ width: 200 }} step={1} />
+          </Form.Item>
+
+          {/* 修改原因说明 */}
+          <Form.Item label="修改原因说明" field="revise">
+            <TextArea placeholder="请输入修改原因" rows={3} />
           </Form.Item>
         </Form>
       </Modal>

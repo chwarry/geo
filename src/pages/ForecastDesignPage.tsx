@@ -101,14 +101,38 @@ function ForecastDesignPage() {
 
   const handleEdit = (record: ForecastRecord) => {
     setEditingRecord(record)
-    // 解析开始里程（例如 "DK718+594" 或 "718+594"）
-    const startMileageParts = record.startMileage.match(/(\d+)\+(\d+\.?\d*)/)
-    const startMileageMain = startMileageParts ? parseInt(startMileageParts[1]) : 0
-    const startMileageSub = startMileageParts ? parseFloat(startMileageParts[2]) : 0
+    // 解析开始里程（例如 "DK718+594", "D1K180+375" 或 "718+594"）
+    // 使用更精确的正则：匹配 "前缀+公里数+米数" 格式
+    const startMileageParts = record.startMileage.match(/([A-Za-z0-9]+?)(\d+)\+(\d+\.?\d*)$/)
+    
+    let mileagePrefix = record.mileagePrefix || 'DK'
+    let startMileageMain = 0
+    let startMileageSub = 0
+    
+    if (startMileageParts) {
+      // 匹配到格式：前缀(D1K) + 公里(180) + 米(375)
+      mileagePrefix = startMileageParts[1] || 'DK'
+      startMileageMain = parseInt(startMileageParts[2]) || 0
+      startMileageSub = parseInt(startMileageParts[3]) || 0  // 米数是整数
+    } else {
+      // 尝试简单格式：公里+米
+      const simpleParts = record.startMileage.match(/(\d+)\+(\d+)/)
+      if (simpleParts) {
+        startMileageMain = parseInt(simpleParts[1]) || 0
+        startMileageSub = parseInt(simpleParts[2]) || 0  // 米数是整数
+      }
+    }
+    
+    console.log('🔍 [编辑] 解析里程:', {
+      原始: record.startMileage,
+      前缀: mileagePrefix,
+      公里: startMileageMain,
+      米: startMileageSub
+    })
     
     addForm.setFieldsValue({
       method: record.method,
-      mileagePrefix: record.mileagePrefix || 'DK',
+      mileagePrefix,
       startMileageMain,
       startMileageSub,
       length: record.length,
@@ -215,14 +239,53 @@ function ForecastDesignPage() {
   const handleAddOk = async () => {
     try {
       const values = await addForm.validate()
-      await apiAdapter.createForecastDesign(values)
+      
+      // 验证并规范化里程格式
+      // 如果用户输入的是 "DK180+455"，需要转换为正确的格式
+      const startMatch = values.startMileage.match(/([A-Z]+)?(\d+)\+(\d+)/)
+      const endMatch = values.endMileage.match(/([A-Z]+)?(\d+)\+(\d+)/)
+      
+      if (!startMatch || !endMatch) {
+        Message.error('里程格式不正确，请使用格式：DK180+300')
+        return
+      }
+      
+      // 规范化开始里程
+      const startPrefix = startMatch[1] || 'DK'
+      const startKm = parseInt(startMatch[2])
+      const startM = parseInt(startMatch[3])
+      const normalizedStartMileage = `${startPrefix}${startKm}+${startM}`
+      
+      // 规范化结束里程 - 确保米数不超过999
+      const endPrefix = endMatch[1] || startPrefix
+      let endKm = parseInt(endMatch[2])
+      let endM = parseInt(endMatch[3])
+      
+      // 如果米数超过999，进位到公里
+      if (endM >= 1000) {
+        endKm += Math.floor(endM / 1000)
+        endM = endM % 1000
+      }
+      
+      const normalizedEndMileage = `${endPrefix}${endKm}+${endM}`
+      
+      const submitData = {
+        ...values,
+        startMileage: normalizedStartMileage,
+        endMileage: normalizedEndMileage,
+      }
+      
+      console.log('📤 [设计预报] 新增数据:', submitData)
+      
+      await apiAdapter.createForecastDesign(submitData)
       Message.success('新增成功')
       setAddVisible(false)
       addForm.resetFields()
       fetchList()
     } catch (error) {
       console.error('新增预报设计失败:', error)
-      Message.error('新增失败')
+      const errorMsg = error instanceof Error ? error.message : '新增失败'
+      Message.error(errorMsg)
     }
   }
 
@@ -230,9 +293,22 @@ function ForecastDesignPage() {
     if (!editingRecord) return
     try {
       const values = await addForm.validate()
-      // 合并开始里程的两个字段
+      
+      // 计算开始里程
       const startMileage = `${values.mileagePrefix}${values.startMileageMain}+${values.startMileageSub}`
-      const endMileage = `${values.mileagePrefix}${values.startMileageMain}+${parseFloat(values.startMileageSub) + values.length}`
+      
+      // 计算结束里程 - 正确处理公里和米的进位，保留小数
+      const startKm = parseFloat(values.startMileageMain) || 0
+      const startM = parseFloat(values.startMileageSub) || 0
+      const lengthM = parseFloat(values.length) || 0
+      
+      // 总米数
+      const totalM = startM + lengthM
+      // 计算进位后的公里和米，保留2位小数
+      const endKm = Math.floor(startKm) + Math.floor(totalM / 1000)
+      const endM = parseFloat((totalM % 1000).toFixed(2))
+      
+      const endMileage = `${values.mileagePrefix}${endKm}+${endM}`
       
       const submitData = {
         method: values.method,
@@ -248,6 +324,8 @@ function ForecastDesignPage() {
         modifyReason: values.modifyReason,
       }
       
+      console.log('📤 [设计预报] 更新数据:', { startMileage, endMileage, submitData })
+      
       // 调用更新API
       await apiAdapter.updateForecastDesign(editingRecord.id, submitData)
       Message.success('修改成功')
@@ -257,7 +335,8 @@ function ForecastDesignPage() {
       fetchList()
     } catch (error) {
       console.error('修改设计预报失败:', error)
-      Message.error('修改失败')
+      const errorMsg = error instanceof Error ? error.message : '修改失败'
+      Message.error(errorMsg)
     }
   }
 
@@ -459,7 +538,7 @@ function ForecastDesignPage() {
                     noStyle
                     rules={[{ required: true, message: '请输入' }]}
                   >
-                    <InputNumber placeholder="973.2" min={0} max={999.9} step={0.1} style={{ width: '140px' }} />
+                    <InputNumber placeholder="375.00" min={0} max={999.99} step={0.01} precision={2} style={{ width: '140px' }} />
                   </Form.Item>
                 </Space>
               </Form.Item>
@@ -469,13 +548,13 @@ function ForecastDesignPage() {
           {/* 预报长度 和 最小埋深 */}
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="预报长度" field="length" rules={[{ required: true, message: '请输入预报长度' }]}>
-                <InputNumber placeholder="-23.20" style={{ width: '100%' }} step={0.01} />
+              <Form.Item label="预报长度(m)" field="length" rules={[{ required: true, message: '请输入预报长度' }]}>
+                <InputNumber placeholder="25" min={1} style={{ width: '100%' }} step={1} precision={0} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="最小埋深" field="minBurialDepth" rules={[{ required: true, message: '请输入最小埋深' }]}>
-                <InputNumber placeholder="2.00" min={0} style={{ width: '100%' }} step={0.01} />
+              <Form.Item label="最小埋深(m)" field="minBurialDepth" rules={[{ required: true, message: '请输入最小埋深' }]}>
+                <InputNumber placeholder="155" min={0} style={{ width: '100%' }} step={1} precision={0} />
               </Form.Item>
             </Col>
           </Row>
