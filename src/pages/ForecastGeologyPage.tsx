@@ -241,14 +241,17 @@ function ForecastGeologyPage() {
   // 操作处理函数
   const handleEdit = (record: DesignGeologyRecord) => {
     setEditingRecord(record)
+    // dkilo是米数，需要转换为公里和米
+    const kiloMain = Math.floor(record.dkilo / 1000)
+    const kiloSub = record.dkilo % 1000
     modalForm.setFieldsValue({
       method: record.method,
       dzxxfj: record.dzxxfj,
       dkname: record.dkname,
-      startMileageMain: Math.floor(record.dkilo),
-      startMileageSub: Math.round((record.dkilo % 1) * 1000),
-      length: record.sjdzLength,
-      revise: record.revise,
+      startMileageMain: kiloMain,
+      startMileageSub: kiloSub,
+      sjdzLength: record.sjdzLength,
+      username: record.username,
     })
     setModalVisible(true)
   }
@@ -279,41 +282,36 @@ function ForecastGeologyPage() {
     try {
       const values = await modalForm.validate()
       
-      // 计算里程数字（米数）：公里*1000 + 米，带2位小数
-      // 如 D1K0+6 -> 0*1000 + 6 = 6.00
-      const startMileageSub = parseFloat(values.startMileageSub.toFixed(2))  // 确保米数带2位小数
-      const dkilo = parseFloat(((values.startMileageMain * 1000) + startMileageSub).toFixed(2))
-      // 计算结束里程 = 开始里程(米) + 预报长度(米)，带2位小数
-      const endMileage = parseFloat((dkilo + values.length).toFixed(2))
+      // 计算里程数字（米数）：公里*1000 + 米
+      const dkilo = (values.startMileageMain || 0) * 1000 + (values.startMileageSub || 0)
       
       if (editingRecord) {
-        // 更新时的数据格式 - SjdzUpdateDTO (扁平结构)
+        // 更新时的数据格式
         const updateData = {
           sjdzPk: editingRecord.sjdzPk,
+          sdPk: editingRecord.sjdzPk,
           dkname: values.dkname,
           dkilo: dkilo,
-          endMileage: endMileage,
-          sjdzLength: values.length,
           method: values.method,
+          sjdzLength: values.sjdzLength,
           dzxxfj: values.dzxxfj,
-          revise: values.revise || '无',
+          remark: values.remark || '',
         }
         
         console.log('📤 [设计地质] 更新数据:', updateData)
         await realAPI.updateDesignGeology(String(editingRecord.sjdzPk), updateData)
         Message.success('更新成功')
       } else {
-        // 新增时的数据格式 - 包装在sjdz对象中
+        // 新增时的数据格式 - 根据API参数
         const createData = {
-          sjdz: {
-            siteId: siteId || '1',
-            dkname: values.dkname,
-            dkilo: dkilo,
-            sjdzLength: values.length,
-            method: values.method,
-            dzxxfj: values.dzxxfj,
-            revise: values.revise || '无',
-          }
+          bdPk: 1,
+          sdPk: 1,
+          dkname: values.dkname,
+          dkilo: dkilo,
+          method: values.method,
+          sjdzLength: values.sjdzLength,
+          dzxxfj: values.dzxxfj,
+          remark: values.remark || '',
         }
         
         console.log('📤 [设计地质] 创建数据:', createData)
@@ -482,79 +480,95 @@ function ForecastGeologyPage() {
           setEditingRecord(null)
           modalForm.resetFields()
         }}
-        style={{ width: 700 }}
+        style={{ width: 650 }}
         okText="确定"
         cancelText="取消"
       >
-        <Form form={modalForm} layout="horizontal" labelCol={{ span: 6 }} wrapperCol={{ span: 18 }}>
-          {/* 地质分类 */}
-          <Form.Item
-            label="地质分类"
-            field="method"
-            rules={[{ required: true, message: '请选择地质分类' }]}
-          >
-            <Select placeholder="请选择地质分类" style={{ width: 200 }}>
-              {Object.entries(GEOLOGY_TYPE_MAP).map(([key, value]) => (
-                <Select.Option key={key} value={Number(key)}>{value}</Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+        <Form form={modalForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="地质分类"
+                field="method"
+                rules={[{ required: true, message: '请选择地质分类' }]}
+              >
+                <Select placeholder="请选择">
+                  {Object.entries(GEOLOGY_TYPE_MAP).map(([key, value]) => (
+                    <Select.Option key={key} value={Number(key)}>{value}</Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="信息分级"
+                field="dzxxfj"
+                rules={[{ required: true, message: '请选择信息分级' }]}
+              >
+                <Select placeholder="请选择">
+                  {Object.entries(GEOLOGY_LEVEL_MAP).map(([key, value]) => (
+                    <Select.Option key={key} value={Number(key)}>{value}</Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
 
-          {/* 地质信息分级 */}
-          <Form.Item
-            label="地质信息分级"
-            field="dzxxfj"
-            rules={[{ required: true, message: '请选择地质信息分级' }]}
-          >
-            <Select placeholder="请选择地质信息分级" style={{ width: 200 }}>
-              {Object.entries(GEOLOGY_LEVEL_MAP).map(([key, value]) => (
-                <Select.Option key={key} value={Number(key)}>{value}</Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          {/* 里程冠号 和 开始里程 */}
-          <Row>
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 label="里程冠号"
                 field="dkname"
                 rules={[{ required: true, message: '请输入里程冠号' }]}
                 initialValue="DK"
-                labelCol={{ span: 12 }}
-                wrapperCol={{ span: 12 }}
               >
-                <Input placeholder="DK" style={{ width: 100 }} />
+                <Input placeholder="DK" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="开始里程" required labelCol={{ span: 8 }} wrapperCol={{ span: 16 }}>
+              <Form.Item label="开始里程" required>
                 <Space>
                   <Form.Item field="startMileageMain" noStyle rules={[{ required: true, message: '请输入' }]}>
-                    <InputNumber placeholder="719" min={0} style={{ width: 80 }} />
+                    <InputNumber placeholder="0" style={{ width: 80 }} />
                   </Form.Item>
-                  <span>+</span>
+                  <span>-</span>
                   <Form.Item field="startMileageSub" noStyle rules={[{ required: true, message: '请输入' }]}>
-                    <InputNumber placeholder="318.00" min={0} step={0.01} precision={2} style={{ width: 100 }} />
+                    <InputNumber placeholder="0" style={{ width: 80 }} />
                   </Form.Item>
                 </Space>
               </Form.Item>
             </Col>
           </Row>
 
-          {/* 预报长度 */}
-          <Form.Item
-            label="预报长度"
-            field="length"
-            rules={[{ required: true, message: '请输入预报长度' }]}
-          >
-            <InputNumber placeholder="1143" style={{ width: 200 }} step={1} />
-          </Form.Item>
-
-          {/* 修改原因说明 */}
-          <Form.Item label="修改原因说明" field="revise">
-            <TextArea placeholder="请输入修改原因" rows={3} />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="预报长度"
+                field="sjdzLength"
+                rules={[{ required: true, message: '请输入预报长度' }]}
+                extra="单位:m，保留2位小数，整数位不超过8位，大里程填正数，小里程填负数"
+              >
+                <InputNumber 
+                  placeholder="请输入" 
+                  style={{ width: '100%' }} 
+                  precision={2}
+                  max={99999999.99}
+                  min={-99999999.99}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="填写人"
+                field="username"
+                rules={[{ required: true, message: '请选择填写人' }]}
+              >
+                <Select placeholder="请选择">
+                  <Select.Option value="admin">admin</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </div>

@@ -1,6 +1,7 @@
 import React from 'react'
 import { useParams, useSearchParams, Navigate } from 'react-router-dom'
 import GeologyForecastEditPage from './GeologyForecastEditPage'
+import GeologyForecastCreatePage from './GeologyForecastCreatePage'
 import DrillingEditPage from './DrillingEditPage'
 import PalmSketchEditPage from './PalmSketchEditPage'
 import TunnelSketchEditPage from './TunnelSketchEditPage'
@@ -19,10 +20,16 @@ function ForecastEditRouter() {
   
   console.log('🔀 [编辑路由] type:', type, 'id:', id, 'method:', method, 'siteId:', siteId)
   
+  // 新增模式：id === 'new'
+  const isCreateMode = id === 'new';
+  
   // 根据 type 渲染不同的编辑页面
   switch (type) {
     case 'geophysical':
-      // 物探法编辑页面（已实现）
+      // 物探法：新增使用专门的新增页面，编辑使用编辑页面
+      if (isCreateMode) {
+        return <GeologyForecastCreatePage />
+      }
       return <GeologyForecastEditPage />
       
     case 'palmSketch':

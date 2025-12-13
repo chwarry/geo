@@ -523,7 +523,7 @@ class APIAdapter {
   /**
    * 创建掌子面素描记录
    */
-  async createPalmSketch(data: any): Promise<{ success: boolean }> {
+  async createPalmSketch(data: any): Promise<{ success: boolean; message?: string }> {
     if (USE_REAL_API) {
       return realAPI.createPalmSketch(data);
     } else {
@@ -535,7 +535,7 @@ class APIAdapter {
   /**
    * 创建洞身素描记录
    */
-  async createTunnelSketch(data: any): Promise<{ success: boolean }> {
+  async createTunnelSketch(data: any): Promise<{ success: boolean; message?: string }> {
     if (USE_REAL_API) {
       return realAPI.createTunnelSketch(data);
     } else {
@@ -547,7 +547,7 @@ class APIAdapter {
   /**
    * 创建钻探法记录
    */
-  async createDrilling(data: any): Promise<{ success: boolean }> {
+  async createDrilling(data: any): Promise<{ success: boolean; message?: string }> {
     if (USE_REAL_API) {
       return realAPI.createDrilling(data);
     } else {

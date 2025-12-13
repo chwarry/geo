@@ -111,4 +111,3 @@ const HelloHeader: React.FC<HelloHeaderProps> = ({ onNavigate, activeTab = 'fore
 };
 
 export default HelloHeader;
-

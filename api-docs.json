@@ -33,10 +33,6 @@
             "description": "管理员操作相关接口"
         },
         {
-            "name": "SyncController",
-            "description": "大平台数据同步相关接口"
-        },
-        {
             "name": "ZtfController",
             "description": "钻探法相关接口"
         },
@@ -1026,7 +1022,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SjybUpdateDTO"
+                                "$ref": "#/components/schemas/SjybDTO"
                             }
                         }
                     },
@@ -1117,7 +1113,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SjwydjUpdateDTO"
+                                "$ref": "#/components/schemas/SjwydjDTO"
                             }
                         }
                     },
@@ -1208,7 +1204,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SjdzUpdateDTO"
+                                "$ref": "#/components/schemas/SjdzDTO"
                             }
                         }
                     },
@@ -2265,7 +2261,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SjybCreateDTO"
+                                "$ref": "#/components/schemas/SjybDTO"
                             }
                         }
                     },
@@ -2296,7 +2292,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SjwydjCreateDTO"
+                                "$ref": "#/components/schemas/SjwydjDTO"
                             }
                         }
                     },
@@ -2327,7 +2323,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/SjdzCreateDTO"
+                                "$ref": "#/components/schemas/SjdzDTO"
                             }
                         }
                     },
@@ -2464,46 +2460,6 @@
                             "*/*": {
                                 "schema": {
                                     "$ref": "#/components/schemas/BaseResponseBoolean"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/sync/bd-xm": {
-            "post": {
-                "tags": [
-                    "SyncController"
-                ],
-                "operationId": "syncBdAndGd",
-                "parameters": [
-                    {
-                        "name": "startTime",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "date-time"
-                        }
-                    },
-                    {
-                        "name": "endTime",
-                        "in": "query",
-                        "required": true,
-                        "schema": {
-                            "type": "string",
-                            "format": "date-time"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "content": {
-                            "*/*": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/BaseResponseString"
                                 }
                             }
                         }
@@ -5817,19 +5773,16 @@
                 },
                 "description": "电磁波反射-成果图DTO"
             },
-            "SjybUpdateDTO": {
+            "SjybDTO": {
                 "required": [
                     "bdPk",
                     "dkilo",
                     "dkname",
-                    "endMileage",
                     "method",
                     "plannum",
                     "qxsl",
-                    "revise",
                     "sdPk",
                     "sjybLength",
-                    "sjybPk",
                     "username",
                     "zksl",
                     "zxms"
@@ -5862,21 +5815,13 @@
                         "example": "DK"
                     },
                     "dkilo": {
-                        "type": "integer",
-                        "description": "起始里程",
-                        "format": "int32",
-                        "example": 69
-                    },
-                    "endMileage": {
                         "type": "number",
-                        "description": "结束里程",
-                        "format": "double",
-                        "example": 12.67
+                        "description": "起始里程",
+                        "example": 180913
                     },
                     "sjybLength": {
                         "type": "number",
                         "description": "预报长度",
-                        "format": "double",
                         "example": 7
                     },
                     "zxms": {
@@ -5884,7 +5829,6 @@
                         "exclusiveMinimum": false,
                         "type": "number",
                         "description": "最小埋深",
-                        "format": "double",
                         "example": 7
                     },
                     "zksl": {
@@ -5912,30 +5856,17 @@
                         "type": "string",
                         "description": "填写人账号",
                         "example": "张三"
-                    },
-                    "sjybPk": {
-                        "type": "integer",
-                        "description": "设计预报方法主键",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "revise": {
-                        "type": "string",
-                        "description": "修改原因说明"
                     }
                 },
-                "description": "设计预报方法更新请求对象"
+                "description": "设计预报方法创建请求对象"
             },
-            "SjwydjUpdateDTO": {
+            "SjwydjDTO": {
                 "required": [
                     "bdPk",
                     "dkilo",
                     "dkname",
-                    "endMileage",
-                    "revise",
                     "sdPk",
                     "sjwydjLength",
-                    "sjwydjPk",
                     "wydj"
                 ],
                 "type": "object",
@@ -5958,16 +5889,9 @@
                         "example": "DK"
                     },
                     "dkilo": {
-                        "type": "integer",
-                        "description": "起始里程",
-                        "format": "int32",
-                        "example": 69
-                    },
-                    "endMileage": {
                         "type": "number",
-                        "description": "结束里程",
-                        "format": "double",
-                        "example": 12.67
+                        "description": "起始里程",
+                        "example": 180913
                     },
                     "wydj": {
                         "type": "integer",
@@ -5984,29 +5908,17 @@
                     "remark": {
                         "type": "string",
                         "description": "备注"
-                    },
-                    "sjwydjPk": {
-                        "type": "integer",
-                        "description": "设计围岩等级主键",
-                        "format": "int64"
-                    },
-                    "revise": {
-                        "type": "string",
-                        "description": "修改原因说明"
                     }
                 },
-                "description": "设计围岩等级更新请求对象"
+                "description": "设计围岩等级创建请求对象"
             },
-            "SjdzUpdateDTO": {
+            "SjdzDTO": {
                 "required": [
                     "dkilo",
                     "dkname",
                     "dzxxfj",
-                    "endMileage",
                     "method",
-                    "revise",
-                    "sjdzLength",
-                    "sjdzPk"
+                    "sjdzLength"
                 ],
                 "type": "object",
                 "properties": {
@@ -6028,16 +5940,9 @@
                         "example": "DK"
                     },
                     "dkilo": {
-                        "type": "integer",
-                        "description": "起始里程",
-                        "format": "int32",
-                        "example": 69
-                    },
-                    "endMileage": {
                         "type": "number",
-                        "description": "结束里程",
-                        "format": "double",
-                        "example": 12.67
+                        "description": "起始里程",
+                        "example": 180913
                     },
                     "method": {
                         "maximum": 5,
@@ -6062,19 +5967,9 @@
                     "remark": {
                         "type": "string",
                         "description": "备注"
-                    },
-                    "sjdzPk": {
-                        "type": "integer",
-                        "description": "设计地质主键",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "revise": {
-                        "type": "string",
-                        "description": "备注"
                     }
                 },
-                "description": "设计地质信息更新请求对象"
+                "description": "设计地质信息创建请求对象"
             },
             "DssmDTO": {
                 "type": "object",
@@ -6854,230 +6749,6 @@
                     }
                 },
                 "description": "电磁波反射-成果图文件DTO"
-            },
-            "SjybCreateDTO": {
-                "required": [
-                    "bdPk",
-                    "dkilo",
-                    "dkname",
-                    "endMileage",
-                    "method",
-                    "plannum",
-                    "qxsl",
-                    "sdPk",
-                    "sjybLength",
-                    "username",
-                    "zksl",
-                    "zxms"
-                ],
-                "type": "object",
-                "properties": {
-                    "bdPk": {
-                        "type": "integer",
-                        "description": "标段主键",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "sdPk": {
-                        "type": "integer",
-                        "description": "隧道主键",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "method": {
-                        "maximum": 99,
-                        "minimum": 0,
-                        "type": "integer",
-                        "description": "预报方法(0:其他;1:地震波反射;2:水平声波剖面;3:陆地声呐;4:电磁波反射;5:高分辨直流电;6:瞬变电磁;7:掌子面素描;8:洞身素描;12:地表补充地质调查;13:超前水平钻;14:加深炮孔)",
-                        "format": "int32",
-                        "example": 1
-                    },
-                    "dkname": {
-                        "type": "string",
-                        "description": "里程冠号",
-                        "example": "DK"
-                    },
-                    "dkilo": {
-                        "type": "integer",
-                        "description": "起始里程",
-                        "format": "int32",
-                        "example": 69
-                    },
-                    "endMileage": {
-                        "type": "number",
-                        "description": "结束里程",
-                        "format": "double",
-                        "example": 12.67
-                    },
-                    "sjybLength": {
-                        "type": "number",
-                        "description": "预报长度",
-                        "format": "double",
-                        "example": 7
-                    },
-                    "zxms": {
-                        "minimum": 0,
-                        "exclusiveMinimum": false,
-                        "type": "number",
-                        "description": "最小埋深",
-                        "format": "double",
-                        "example": 7
-                    },
-                    "zksl": {
-                        "minimum": 0,
-                        "type": "integer",
-                        "description": "钻孔数量",
-                        "format": "int32",
-                        "example": 5
-                    },
-                    "qxsl": {
-                        "minimum": 0,
-                        "type": "integer",
-                        "description": "取芯数量",
-                        "format": "int32",
-                        "example": 9
-                    },
-                    "plannum": {
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "设计次数",
-                        "format": "int32",
-                        "example": 7
-                    },
-                    "username": {
-                        "type": "string",
-                        "description": "填写人账号",
-                        "example": "张三"
-                    }
-                },
-                "description": "设计预报方法创建请求对象"
-            },
-            "SjwydjCreateDTO": {
-                "required": [
-                    "bdPk",
-                    "dkilo",
-                    "dkname",
-                    "endMileage",
-                    "sdPk",
-                    "sjwydjLength",
-                    "wydj"
-                ],
-                "type": "object",
-                "properties": {
-                    "bdPk": {
-                        "type": "integer",
-                        "description": "标段主键",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "sdPk": {
-                        "type": "integer",
-                        "description": "隧道主键",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "dkname": {
-                        "type": "string",
-                        "description": "里程冠号",
-                        "example": "DK"
-                    },
-                    "dkilo": {
-                        "type": "integer",
-                        "description": "起始里程",
-                        "format": "int32",
-                        "example": 69
-                    },
-                    "endMileage": {
-                        "type": "number",
-                        "description": "结束里程",
-                        "format": "double",
-                        "example": 12.67
-                    },
-                    "wydj": {
-                        "type": "integer",
-                        "description": "围岩等级(1-6)",
-                        "format": "int32",
-                        "example": 3
-                    },
-                    "sjwydjLength": {
-                        "type": "number",
-                        "description": "预报长度",
-                        "format": "double",
-                        "example": 7
-                    },
-                    "remark": {
-                        "type": "string",
-                        "description": "备注"
-                    }
-                },
-                "description": "设计围岩等级创建请求对象"
-            },
-            "SjdzCreateDTO": {
-                "required": [
-                    "dkilo",
-                    "dkname",
-                    "dzxxfj",
-                    "endMileage",
-                    "method",
-                    "sjdzLength"
-                ],
-                "type": "object",
-                "properties": {
-                    "bdPk": {
-                        "type": "integer",
-                        "description": "标段主键",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "sdPk": {
-                        "type": "integer",
-                        "description": "隧道主键",
-                        "format": "int64",
-                        "example": 1
-                    },
-                    "dkname": {
-                        "type": "string",
-                        "description": "里程冠号",
-                        "example": "DK"
-                    },
-                    "dkilo": {
-                        "type": "integer",
-                        "description": "起始里程",
-                        "format": "int32",
-                        "example": 69
-                    },
-                    "endMileage": {
-                        "type": "number",
-                        "description": "结束里程",
-                        "format": "double",
-                        "example": 12.67
-                    },
-                    "method": {
-                        "maximum": 5,
-                        "minimum": 1,
-                        "type": "integer",
-                        "description": "地质分类(1:岩溶发育度;2:瓦斯影响度;3:地应力影响度;4:涌水涌泥程度;5:断层稳定程度)",
-                        "format": "int32",
-                        "example": 1
-                    },
-                    "sjdzLength": {
-                        "type": "number",
-                        "description": "预报长度",
-                        "format": "double",
-                        "example": 7
-                    },
-                    "dzxxfj": {
-                        "maximum": 4,
-                        "minimum": 1,
-                        "type": "integer",
-                        "format": "int32"
-                    },
-                    "remark": {
-                        "type": "string",
-                        "description": "备注"
-                    }
-                },
-                "description": "设计地质信息创建请求对象"
             },
             "DssmFileDTO": {
                 "type": "object",

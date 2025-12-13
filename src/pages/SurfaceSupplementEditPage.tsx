@@ -14,11 +14,11 @@ import {
   Space,
   Upload,
   Table,
-  Modal,
-  Tag
+  Modal
 } from '@arco-design/web-react'
 import { IconLeft, IconSave, IconPlus, IconEdit, IconDelete } from '@arco-design/web-react/icon'
 import apiAdapter from '../services/apiAdapter'
+import SegmentModal, { SegmentData, DZJB_OPTIONS } from '../components/SegmentModal'
 
 const { TextArea } = Input
 const TabPane = Tabs.TabPane
@@ -33,7 +33,6 @@ function SurfaceSupplementEditPage() {
   const siteId = searchParams.get('siteId')
   
   const [form] = Form.useForm()
-  const [segmentForm] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('basic')
@@ -48,6 +47,18 @@ function SurfaceSupplementEditPage() {
   useEffect(() => {
     const fetchDetail = async () => {
       if (!id) return
+      
+      // 新增模式，不需要调用详情接口
+      const isNew = id === 'new'
+      if (isNew) {
+        // 设置默认值
+        form.setFieldsValue({
+          dkname: 'X2DK',
+          siteId: siteId,
+        })
+        console.log('📝 [地表补充] 新增模式，跳过详情接口')
+        return
+      }
       
       setLoading(true)
       try {
@@ -92,15 +103,18 @@ function SurfaceSupplementEditPage() {
       
       setSaving(true)
       
+      const isNew = id === 'new'
+      
       // 合并原始数据和表单修改的数据，确保未修改的字段保留原值
       const submitData = {
         ...detailData,    // 先用原始数据
         ...values,        // 再用表单值覆盖（用户修改的部分）
-        ybPk: id,
+        ybPk: isNew ? null : null,  // 临时设置为null，后端修复后改回id
         siteId: siteId || detailData?.siteId,
+        method: 12,       // 地表补充的method为12
         ybjgDTOList: segmentList.map(item => ({
-          ybjgPk: item.ybjgPk,
-          ybPk: id,
+          ybjgPk: null,   // 临时设置为null
+          ybPk: null,     // 临时设置为null
           dkname: item.dkname,
           sdkilo: item.sdkilo,
           edkilo: item.edkilo,
@@ -112,15 +126,22 @@ function SurfaceSupplementEditPage() {
         }))
       }
       
-      console.log('📤 [地表补充] 提交数据:', submitData)
+      console.log('📤 [地表补充] 提交数据:', submitData, '是否新增:', isNew)
       
-      const result = await apiAdapter.updateSurfaceSupplement(id!, submitData)
+      let result
+      if (isNew) {
+        // 新增模式调用create接口
+        result = await apiAdapter.createSurfaceSupplement(submitData)
+      } else {
+        // 编辑模式调用update接口
+        result = await apiAdapter.updateSurfaceSupplement(id!, submitData)
+      }
       
       if (result?.success) {
-        Message.success('保存成功')
+        Message.success(isNew ? '新增成功' : '保存成功')
         handleBack()
       } else {
-        Message.error('保存失败')
+        Message.error(isNew ? '新增失败' : '保存失败')
       }
     } catch (error) {
       console.error('❌ 保存失败:', error)
@@ -133,62 +154,35 @@ function SurfaceSupplementEditPage() {
   // 打开分段信息编辑弹窗
   const handleEditSegment = (record: any) => {
     setEditingSegment(record)
-    segmentForm.setFieldsValue({
-      dkname: record.dkname || 'X2DK',
-      wylevel: record.wylevel || 1,
-      sdkilo: record.sdkilo,
-      edkilo: record.edkilo,
-      sdkiloEnd: record.sdkiloEnd || 250,
-      edkiloEnd: record.edkiloEnd || 240,
-      ybjgTime: record.ybjgTime,
-      risklevel: record.risklevel || '破碎带',
-      grade: record.grade,
-      jlresult: record.jlresult
-    })
     setSegmentModalVisible(true)
   }
 
   // 新增分段信息
   const handleAddSegment = () => {
     setEditingSegment(null)
-    segmentForm.resetFields()
-    segmentForm.setFieldsValue({
-      dkname: 'X2DK',
-      wylevel: 1,
-      ybjgTime: new Date().toISOString().replace('T', ' ').substring(0, 19)
-    })
     setSegmentModalVisible(true)
   }
 
-  // 保存分段信息
-  const handleSaveSegment = async () => {
-    try {
-      await segmentForm.validate()
-      const values = segmentForm.getFieldsValue()
-      
-      if (editingSegment) {
-        // 编辑现有记录
-        const updatedList = segmentList.map(item => 
-          item.ybjgPk === editingSegment.ybjgPk ? { ...item, ...values } : item
-        )
-        setSegmentList(updatedList)
-        Message.success('分段信息更新成功')
-      } else {
-        // 新增记录
-        const newSegment = {
-          ...values,
-          ybjgPk: Date.now(), // 临时ID
-          ybPk: id
-        }
-        setSegmentList([...segmentList, newSegment])
-        Message.success('分段信息添加成功')
+  // 保存分段信息（来自SegmentModal组件）
+  const handleSaveSegment = (data: SegmentData) => {
+    if (editingSegment) {
+      // 编辑现有记录
+      const updatedList = segmentList.map(item => 
+        item.ybjgPk === editingSegment.ybjgPk ? { ...item, ...data } : item
+      )
+      setSegmentList(updatedList)
+      Message.success('分段信息更新成功')
+    } else {
+      // 新增记录
+      const newSegment = {
+        ...data,
+        ybjgPk: Date.now(), // 临时ID
+        ybPk: id
       }
-      
-      setSegmentModalVisible(false)
-    } catch (error) {
-      console.error('❌ 保存分段信息失败:', error)
-      Message.error('请检查表单填写')
+      setSegmentList([...segmentList, newSegment])
+      Message.success('分段信息添加成功')
     }
+    setSegmentModalVisible(false)
   }
 
   // 删除分段信息
@@ -221,7 +215,7 @@ function SurfaceSupplementEditPage() {
         fontWeight: 500,
         borderBottom: '1px solid #C9CDD4'
       }}>
-        <span>地表信息编辑</span>
+        <span>地表补充编辑</span>
         <Button 
           type="text" 
           icon={<IconLeft style={{ fontSize: 18 }} />} 
@@ -290,8 +284,18 @@ function SurfaceSupplementEditPage() {
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="本次预报长度" field="dbbcLength" rules={[{ required: true, message: '请输入预报长度' }]}>
-                      <InputNumber placeholder="-10.00" style={{ width: '100%' }} />
+                    <Form.Item 
+                      label="本次预报长度" 
+                      field="dbbcLength" 
+                      rules={[{ required: true, message: '请输入预报长度' }]}
+                      extra="单位:m，保留2位小数，整数位不超过5位"
+                    >
+                      <InputNumber 
+                        placeholder="50.00" 
+                        style={{ width: '100%' }} 
+                        precision={2}
+                        max={99999.99}
+                      />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
@@ -435,8 +439,8 @@ function SurfaceSupplementEditPage() {
               </Form>
             </TabPane>
 
-            {/* 地表信息 Tab */}
-            <TabPane key="surface" title="地表信息">
+            {/* 地表补充 Tab */}
+            <TabPane key="surface" title="地表补充">
               <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
                 <div style={{ 
                   textAlign: 'center', 
@@ -447,14 +451,14 @@ function SurfaceSupplementEditPage() {
                   backgroundColor: '#f7f8fa',
                   borderRadius: 4
                 }}>
-                  其他地表信息
+                  地表补充信息
                 </div>
 
                 <Row gutter={24}>
                   <Col span={12}>
-                    <Form.Item label="地层岩性描述" field="dcyx" rules={[{ required: true, message: '请输入地层岩性描述' }]}>
+                    <Form.Item label="地层岩性" field="dcyx" rules={[{ required: true, message: '请输入地层岩性' }]}>
                       <TextArea 
-                        placeholder="文字描述（必填）" 
+                        placeholder="文字描述" 
                         maxLength={256}
                         showWordLimit
                         style={{ minHeight: 100 }}
@@ -462,32 +466,9 @@ function SurfaceSupplementEditPage() {
                     </Form.Item>
                   </Col>
                   <Col span={12}>
-                    <Form.Item label="地表岩溶描述" field="dbry" rules={[{ required: true, message: '请输入地表岩溶描述' }]}>
+                    <Form.Item label="地表溶岩" field="dbry" rules={[{ required: true, message: '请输入地表溶岩' }]}>
                       <TextArea 
-                        placeholder="文字描述（必填）" 
-                        maxLength={256}
-                        showWordLimit
-                        style={{ minHeight: 100 }}
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-
-                <Row gutter={24}>
-                  <Col span={12}>
-                    <Form.Item label="特殊地质产状描述" field="tsdz" rules={[{ required: true, message: '请输入特殊地质产状描述' }]}>
-                      <TextArea 
-                        placeholder="文字描述（必填）" 
-                        maxLength={256}
-                        showWordLimit
-                        style={{ minHeight: 100 }}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={12}>
-                    <Form.Item label="人为坑道描述" field="rwdk" rules={[{ required: true, message: '请输入人为坑道描述' }]}>
-                      <TextArea 
-                        placeholder="文字描述（必填）" 
+                        placeholder="文字描述" 
                         maxLength={256}
                         showWordLimit
                         style={{ minHeight: 100 }}
@@ -498,9 +479,32 @@ function SurfaceSupplementEditPage() {
 
                 <Row gutter={24}>
                   <Col span={12}>
-                    <Form.Item label="地质评定" field="dzpj" rules={[{ required: true, message: '请输入地质评定' }]}>
+                    <Form.Item label="特殊地质" field="tsdz" rules={[{ required: true, message: '请输入特殊地质' }]}>
                       <TextArea 
-                        placeholder="文字描述（必填）" 
+                        placeholder="文字描述" 
+                        maxLength={256}
+                        showWordLimit
+                        style={{ minHeight: 100 }}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item label="人为洞口" field="rwdk" rules={[{ required: true, message: '请输入人为洞口' }]}>
+                      <TextArea 
+                        placeholder="文字描述" 
+                        maxLength={256}
+                        showWordLimit
+                        style={{ minHeight: 100 }}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={12}>
+                    <Form.Item label="地质评价" field="dzpj" rules={[{ required: true, message: '请输入地质评价' }]}>
+                      <TextArea 
+                        placeholder="文字描述" 
                         maxLength={256}
                         showWordLimit
                         style={{ minHeight: 100 }}
@@ -578,10 +582,18 @@ function SurfaceSupplementEditPage() {
                     },
                     { 
                       title: '地质类别', 
-                      dataIndex: 'geologyType', 
+                      dataIndex: 'dzjb', 
                       width: 100,
                       align: 'center' as const,
-                      render: () => '绿色'
+                      render: (val: string) => {
+                        const colorMap: Record<string, { bg: string; text: string; label: string }> = {
+                          'green': { bg: '#52c41a', text: '#fff', label: '绿色' },
+                          'yellow': { bg: '#faad14', text: '#fff', label: '黄色' },
+                          'red': { bg: '#ff4d4f', text: '#fff', label: '红色' },
+                        }
+                        const config = colorMap[val] || colorMap['green']
+                        return <span style={{ backgroundColor: config.bg, color: config.text, padding: '2px 8px', borderRadius: 4 }}>{config.label}</span>
+                      }
                     },
                     { 
                       title: '围岩等级', 
@@ -638,44 +650,7 @@ function SurfaceSupplementEditPage() {
                   }
                 />
 
-                {/* 下次超前地质预报 */}
-                <div style={{ 
-                  textAlign: 'center', 
-                  fontSize: 14, 
-                  fontWeight: 600, 
-                  marginTop: 30,
-                  marginBottom: 20,
-                  padding: '10px 0',
-                  backgroundColor: '#f7f8fa',
-                  borderRadius: 4
-                }}>
-                  下次超前地质预报
-                </div>
-                
-                <Form form={form} layout="inline">
-                  <Row gutter={24} style={{ width: '100%' }}>
-                    <Col span={8}>
-                      <Form.Item label="下次预报方法" field="nextMethod">
-                        <Select placeholder="请选择" style={{ width: 200 }}>
-                          <Select.Option value="1">地震波反射</Select.Option>
-                          <Select.Option value="2">水平声波剖面</Select.Option>
-                          <Select.Option value="3">陆地声呐</Select.Option>
-                          <Select.Option value="4">电磁波反射</Select.Option>
-                          <Select.Option value="5">高分辨直流电</Select.Option>
-                          <Select.Option value="6">瞬变电磁</Select.Option>
-                          <Select.Option value="12">地表补充</Select.Option>
-                          <Select.Option value="13">超前水平钻</Select.Option>
-                          <Select.Option value="14">加深炮孔</Select.Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col span={8}>
-                      <Form.Item label="预报开始里程" field="nextBeginKilo">
-                        <Input placeholder="请输入" style={{ width: 200 }} />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                </Form>
+                {/* 下次超前地质预报 - 已隐藏 */}
               </div>
             </TabPane>
 
@@ -784,110 +759,14 @@ function SurfaceSupplementEditPage() {
         </Spin>
       </div>
 
-      {/* 分段信息编辑弹窗 */}
-      <Modal
-        title={editingSegment ? '编辑分段信息' : '新增分段信息'}
+      {/* 分段信息编辑弹窗 - 使用通用组件 */}
+      <SegmentModal
         visible={segmentModalVisible}
-        onOk={handleSaveSegment}
         onCancel={() => setSegmentModalVisible(false)}
-        style={{ width: 700 }}
-        okText="确认"
-        cancelText="取消"
-      >
-        <Form form={segmentForm} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
-                <Input placeholder="X2DK" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="围岩等级" field="wylevel" rules={[{ required: true, message: '请选择围岩等级' }]}>
-                <Select placeholder="请选择">
-                  <Select.Option value={1}>Ⅰ</Select.Option>
-                  <Select.Option value={2}>Ⅱ</Select.Option>
-                  <Select.Option value={3}>Ⅲ</Select.Option>
-                  <Select.Option value={4}>Ⅳ</Select.Option>
-                  <Select.Option value={5}>Ⅴ</Select.Option>
-                  <Select.Option value={6}>Ⅵ</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="开始里程" rules={[{ required: true, message: '请输入开始里程' }]}>
-                <Input.Group>
-                  <Form.Item field="sdkilo" noStyle>
-                    <InputNumber placeholder="0" style={{ width: '45%' }} />
-                  </Form.Item>
-                  <span style={{ padding: '0 8px', lineHeight: '32px' }}>+</span>
-                  <Form.Item field="sdkiloEnd" noStyle>
-                    <InputNumber placeholder="250" style={{ width: '45%' }} />
-                  </Form.Item>
-                </Input.Group>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="结束里程" rules={[{ required: true, message: '请输入结束里程' }]}>
-                <Input.Group>
-                  <Form.Item field="edkilo" noStyle>
-                    <InputNumber placeholder="0" style={{ width: '45%' }} />
-                  </Form.Item>
-                  <span style={{ padding: '0 8px', lineHeight: '32px' }}>+</span>
-                  <Form.Item field="edkiloEnd" noStyle>
-                    <InputNumber placeholder="240" style={{ width: '45%' }} />
-                  </Form.Item>
-                </Input.Group>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="产生时间" field="ybjgTime" rules={[{ required: true, message: '请选择时间' }]}>
-                <DatePicker showTime style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item label="风险类别" field="risklevel" rules={[{ required: true, message: '请输入风险类别' }]}>
-                <Input placeholder="破碎带 ▼" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="地质级别" field="grade">
-                <div>
-                  <span style={{ marginRight: 8 }}>已选:</span>
-                  <Tag color="red">红色</Tag>
-                  <div style={{ marginTop: 8 }}>
-                    <span style={{ marginRight: 8 }}>待选:</span>
-                    <Tag color="green" style={{ cursor: 'pointer', marginRight: 4 }}>绿色</Tag>
-                    <Tag color="gold" style={{ cursor: 'pointer', marginRight: 4 }}>黄色</Tag>
-                    <Tag color="orange" style={{ cursor: 'pointer' }}>橙色</Tag>
-                  </div>
-                </div>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item label="预报结论" field="jlresult" rules={[{ required: true, message: '请输入预报结论' }]}>
-                <TextArea 
-                  placeholder="文字描述" 
-                  maxLength={500}
-                  showWordLimit
-                  style={{ minHeight: 80 }}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </Modal>
+        onOk={handleSaveSegment}
+        editingData={editingSegment}
+        defaultDkname="X2DK"
+      />
     </div>
   )
 }

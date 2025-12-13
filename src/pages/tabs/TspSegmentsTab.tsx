@@ -76,6 +76,10 @@ const TspSegmentsTab: React.FC<TspSegmentsTabProps> = ({ form, ybjgList = [], on
     setLocalList(ybjgList || []);
   }, [ybjgList]);
 
+  useEffect(() => {
+    console.log('🔔 [TspSegmentsTab] visible 状态变化:', visible);
+  }, [visible]);
+
   const columns = [
     {
       title: '序号',
@@ -148,6 +152,7 @@ const TspSegmentsTab: React.FC<TspSegmentsTabProps> = ({ form, ybjgList = [], on
   ];
 
   const handleAdd = () => {
+    console.log('🔔 [TspSegmentsTab] 点击新增按钮');
     setEditingItem({ isNew: true });
     editForm.resetFields();
     // 默认值
@@ -159,7 +164,9 @@ const TspSegmentsTab: React.FC<TspSegmentsTabProps> = ({ form, ybjgList = [], on
         dkname: form.getFieldValue('dkname') || 'DK',
         ybjgTime: timeStr
     });
+    console.log('🔔 [TspSegmentsTab] 设置 visible 为 true');
     setVisible(true);
+    console.log('🔔 [TspSegmentsTab] visible 状态已更新');
   };
 
   const handleEdit = (record: any, index: number) => {
@@ -245,56 +252,108 @@ const TspSegmentsTab: React.FC<TspSegmentsTabProps> = ({ form, ybjgList = [], on
         title={editingItem?.isNew ? '新增分段' : '编辑分段'}
         visible={visible}
         onOk={handleModalOk}
-        onCancel={() => setVisible(false)}
-        mountOnEnter={false}
+        onCancel={() => {
+          console.log('🔔 [TspSegmentsTab] 关闭弹窗');
+          setVisible(false);
+        }}
         style={{ width: 700 }}
+        okText="确认"
+        cancelText="取消"
       >
         <Form form={editForm} layout="vertical">
-          <Row gutter={24}>
+          <Row gutter={16}>
             <Col span={12}>
-              <FormItem label="里程冠号" field="dkname" rules={[{ required: true }]}>
+              <FormItem label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
                 <Input placeholder="例如: DK" />
               </FormItem>
             </Col>
             <Col span={12}>
-              <FormItem label="生产时间" field="ybjgTime">
-                <DatePicker showTime style={{ width: '100%' }} />
+              <FormItem label="国省等级" field="gsdj">
+                <Select placeholder="请选择国省等级" allowClear>
+                  <Select.Option value="国道">国道</Select.Option>
+                  <Select.Option value="省道">省道</Select.Option>
+                  <Select.Option value="县道">县道</Select.Option>
+                </Select>
               </FormItem>
             </Col>
           </Row>
-          <Row gutter={24}>
+          
+          <Row gutter={16}>
             <Col span={12}>
-              <FormItem label="开始里程值" field="sdkilo" rules={[{ required: true, type: 'number' }]}>
-                <InputNumber style={{ width: '100%' }} />
+              <FormItem label="开始里程" required>
+                <Space>
+                  <FormItem field="sdkilo" noStyle rules={[{ required: true, type: 'number', message: '请输入' }]}>
+                    <InputNumber style={{ width: '120px' }} placeholder="0" precision={2} />
+                  </FormItem>
+                  <span>+</span>
+                  <FormItem field="edkilo" noStyle rules={[{ required: true, type: 'number', message: '请输入' }]}>
+                    <InputNumber style={{ width: '120px' }} placeholder="0" precision={2} />
+                  </FormItem>
+                </Space>
               </FormItem>
             </Col>
             <Col span={12}>
-              <FormItem label="结束里程值" field="edkilo" rules={[{ required: true, type: 'number' }]}>
-                <InputNumber style={{ width: '100%' }} />
+              <FormItem label="结束里程" required>
+                <Space>
+                  <InputNumber style={{ width: '120px' }} placeholder="0" precision={2} disabled />
+                  <span>+</span>
+                  <InputNumber style={{ width: '120px' }} placeholder="0" precision={2} disabled />
+                </Space>
               </FormItem>
             </Col>
           </Row>
-          <Row gutter={24}>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <FormItem label="产生时间" field="ybjgTime">
+                <DatePicker showTime style={{ width: '100%' }} placeholder="请选择日期" />
+              </FormItem>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
             <Col span={12}>
               <FormItem label="风险类别" field="risklevel">
-                <Select options={RISK_LEVEL_OPTIONS} allowCreate />
+                <Input placeholder="请选择风险类别..." />
               </FormItem>
             </Col>
             <Col span={12}>
-               <FormItem label="地质级别" field="grade">
-                 <Select options={GRADE_OPTIONS} />
-               </FormItem>
+              <FormItem label="地质风险" field="dzfx">
+                <Space>
+                  <span>已选:</span>
+                  <Button 
+                    type="primary" 
+                    style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                    onClick={() => editForm.setFieldValue('dzfx', 'green')}
+                  >
+                    绿色
+                  </Button>
+                  <Button 
+                    type="primary" 
+                    style={{ backgroundColor: '#faad14', borderColor: '#faad14' }}
+                    onClick={() => editForm.setFieldValue('dzfx', 'yellow')}
+                  >
+                    黄色
+                  </Button>
+                  <Button 
+                    type="primary" 
+                    status="danger"
+                    onClick={() => editForm.setFieldValue('dzfx', 'red')}
+                  >
+                    红色
+                  </Button>
+                </Space>
+              </FormItem>
             </Col>
           </Row>
-          <Row gutter={24}>
-             <Col span={12}>
-               <FormItem label="围岩等级" field="wylevel">
-                 <Select options={WY_LEVEL_OPTIONS} />
-               </FormItem>
-             </Col>
-          </Row>
+
           <FormItem label="预报结论" field="jlresult">
-             <Input.TextArea rows={4} />
+            <Input.TextArea 
+              rows={4} 
+              placeholder="请输入预报结论"
+              maxLength={500}
+              showWordLimit
+            />
           </FormItem>
         </Form>
       </Modal>

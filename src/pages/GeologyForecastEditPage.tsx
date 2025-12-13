@@ -226,34 +226,19 @@ function GeologyForecastEditPage() {
   }, [id, type, methodParam, location.state]);
 
   const handleSave = async () => {
-    console.log('💾 ========== 开始保存 ==========');
-    console.log('💾 form对象:', form);
-    console.log('💾 record状态:', record);
-    console.log('💾 isCreateMode:', isCreateMode);
+    console.log('💾 保存数据 - 原始record:', record);
     
+    // 获取表单所有字段值
+    const formValues = form.getFieldsValue();
+    console.log('💾 保存数据 - 表单值:', formValues);
+    
+    // 合并 record 和表单值
+    const allValues = { ...record, ...formValues };
+    console.log('💾 保存数据 - 合并后:', allValues);
+    
+    let values = allValues;
+      
     try {
-      // 先获取所有字段值（包括未验证的）
-      let allValues: any = {};
-      try {
-        allValues = form.getFieldsValue();
-        console.log('💾 保存数据 - 所有字段值:', allValues);
-      } catch (e) {
-        console.error('❌ form.getFieldsValue() 失败:', e);
-      }
-      console.log('💾 保存数据 - 原始record:', record);
-      
-      // 然后验证表单（可能会失败，所以放在后面）
-      let values = allValues;
-      try {
-        values = await form.validate();
-        console.log('💾 保存数据 - 验证后values:', values);
-      } catch (validateError) {
-        console.warn('⚠️ 表单验证失败，使用所有字段值:', validateError);
-        // 验证失败时使用 getFieldsValue 的结果
-      }
-      
-      console.log('💾 URL参数 - type:', type, 'id:', id, 'method:', methodParam, 'isCreateMode:', isCreateMode);
-
       if (!type) {
         Message.warning('缺少必要参数');
         return;
@@ -261,20 +246,13 @@ function GeologyForecastEditPage() {
 
       setLoading(true);
 
-      // 合并原始数据和表单数据，确保必填字段存在
-      // 优先级：record < allValues < values（验证后的值优先）
+      // 构建提交数据
       const submitData = {
-        ...record,  // 保留原始数据中的所有字段
-        ...allValues, // 用所有表单字段覆盖
-        ...values,  // 用验证后的表单数据覆盖
-        ybjgDTOList: ybjgList, // 包含分段列表数据
-        tspPddataDTOList: tspPdList, // 炮点数据
-        tspBxdataDTOList: tspBxList, // 围岩数据
+        ...values,
+        ybjgDTOList: ybjgList,
+        tspPddataDTOList: tspPdList,
+        tspBxdataDTOList: tspBxList,
       };
-      
-      console.log('💾 合并数据来源 - record:', Object.keys(record || {}));
-      console.log('💾 合并数据来源 - allValues:', Object.keys(allValues || {}));
-      console.log('💾 合并数据来源 - values:', Object.keys(values || {}));
 
       // 确保必填字段存在（如果record中没有，尝试从其他来源获取）
       if (!submitData.siteId) {
@@ -989,6 +967,9 @@ function GeologyForecastEditPage() {
 
     // 物探法的复杂表单（包含所有物探方法：地震波反射、水平声波剖面、陆地声呐等）
     if (type === 'geophysical') {
+      // 陆地声呐有特殊的基本信息布局
+      const isLDSN = methodParam === '3';
+      
       return (
         <Tabs type="line">
           <TabPane key="basic" title="基本信息及其他信息">
@@ -1002,15 +983,17 @@ function GeologyForecastEditPage() {
                 </Form.Item>
               </Grid.Col>
               <Grid.Col span={8}>
-                <Form.Item label="预报时间" field="monitordate">
+                <Form.Item label="预报时间" field="monitordate" rules={[{ required: true, message: '请选择预报时间' }]}>
                   <DatePicker showTime style={{ width: '100%' }} />
                 </Form.Item>
               </Grid.Col>
-              <Grid.Col span={8}>
-                <Form.Item label="工点编号" field="siteId" disabled>
-                  <Input placeholder="工点编号" />
-                </Form.Item>
-              </Grid.Col>
+              {!isLDSN && (
+                <Grid.Col span={8}>
+                  <Form.Item label="工点编号" field="siteId" disabled>
+                    <Input placeholder="工点编号" />
+                  </Form.Item>
+                </Grid.Col>
+              )}
             </Grid.Row>
             <Grid.Row gutter={24}>
               <Grid.Col span={8}>
@@ -1018,100 +1001,180 @@ function GeologyForecastEditPage() {
                   <Input placeholder="例如: DK" />
                 </Form.Item>
               </Grid.Col>
-              <Grid.Col span={8}>
-                <Form.Item label="掌子面里程" field="dkilo">
-                  <InputNumber style={{ width: '100%' }} placeholder="里程数值" />
-                </Form.Item>
-              </Grid.Col>
-              <Grid.Col span={8}>
-                <Form.Item label="预报长度" field="ybLength">
-                  <InputNumber style={{ width: '100%' }} placeholder="预报长度(m)" />
-                </Form.Item>
-              </Grid.Col>
+              {isLDSN ? (
+                <>
+                  <Grid.Col span={12}>
+                    <Form.Item label="掌子面里程" required>
+                      <Space>
+                        <Form.Item field="sdkilo" noStyle rules={[{ required: true, message: '请输入起始里程' }]}>
+                          <InputNumber 
+                            style={{ width: '150px' }} 
+                            placeholder="0" 
+                            precision={2}
+                          />
+                        </Form.Item>
+                        <span>+</span>
+                        <Form.Item field="dkilo" noStyle rules={[{ required: true, message: '请输入里程值' }]}>
+                          <InputNumber 
+                            style={{ width: '150px' }} 
+                            placeholder="0" 
+                            precision={2}
+                          />
+                        </Form.Item>
+                      </Space>
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={4}>
+                    <Form.Item label="预报长度" field="ybLength" rules={[{ required: true, message: '请输入预报长度' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="预报长度(m)" />
+                    </Form.Item>
+                  </Grid.Col>
+                </>
+              ) : (
+                <>
+                  <Grid.Col span={8}>
+                    <Form.Item label="掌子面里程" field="dkilo" rules={[{ required: true, message: '请输入掌子面里程' }]}>
+                      <InputNumber style={{ width: '100%' }} placeholder="里程数值" />
+                    </Form.Item>
+                  </Grid.Col>
+                  <Grid.Col span={8}>
+                    <Form.Item label="预报长度" field="ybLength">
+                      <InputNumber style={{ width: '100%' }} placeholder="预报长度(m)" />
+                    </Form.Item>
+                  </Grid.Col>
+                </>
+              )}
             </Grid.Row>
 
             <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>人员信息</div>
             <Grid.Row gutter={24}>
               <Grid.Col span={8}>
-                <Form.Item label="检测人员" field="testname">
-                  <Input placeholder="检测人员姓名" />
+                <Form.Item label={isLDSN ? "检测人" : "检测人员"} field="testname">
+                  <Input placeholder={isLDSN ? "检测人" : "检测人员姓名"} />
                 </Form.Item>
               </Grid.Col>
               <Grid.Col span={8}>
-                <Form.Item label="检测人员编号" field="testno">
-                  <Input placeholder="检测人员编号" />
+                <Form.Item label={isLDSN ? "检测人身份证" : "检测人员编号"} field="testno">
+                  <Input placeholder={isLDSN ? "检测人身份证" : "检测人员编号"} />
                 </Form.Item>
               </Grid.Col>
               <Grid.Col span={8}>
-                <Form.Item label="检测人员电话" field="testtel">
-                  <Input placeholder="检测人员电话" />
-                </Form.Item>
-              </Grid.Col>
-            </Grid.Row>
-            <Grid.Row gutter={24}>
-              <Grid.Col span={8}>
-                <Form.Item label="监测人员" field="monitorname">
-                  <Input placeholder="监测人员姓名" />
-                </Form.Item>
-              </Grid.Col>
-              <Grid.Col span={8}>
-                <Form.Item label="监测人员编号" field="monitorno">
-                  <Input placeholder="监测人员编号" />
-                </Form.Item>
-              </Grid.Col>
-              <Grid.Col span={8}>
-                <Form.Item label="监测人员电话" field="monitortel">
-                  <Input placeholder="监测人员电话" />
+                <Form.Item label={isLDSN ? "检测人电话" : "检测人员电话"} field="testtel">
+                  <Input placeholder={isLDSN ? "检测人电话" : "检测人员电话"} />
                 </Form.Item>
               </Grid.Col>
             </Grid.Row>
             <Grid.Row gutter={24}>
               <Grid.Col span={8}>
-                <Form.Item label="监理人员" field="supervisorname">
-                  <Input placeholder="监理人员姓名" />
+                <Form.Item label={isLDSN ? "复核人" : "监测人员"} field="monitorname">
+                  <Input placeholder={isLDSN ? "复核人" : "监测人员姓名"} />
                 </Form.Item>
               </Grid.Col>
               <Grid.Col span={8}>
-                <Form.Item label="监理人员编号" field="supervisorno">
-                  <Input placeholder="监理人员编号" />
+                <Form.Item label={isLDSN ? "复核人身份证" : "监测人员编号"} field="monitorno">
+                  <Input placeholder={isLDSN ? "复核人身份证" : "监测人员编号"} />
                 </Form.Item>
               </Grid.Col>
               <Grid.Col span={8}>
-                <Form.Item label="监理人员电话" field="supervisortel">
-                  <Input placeholder="监理人员电话" />
+                <Form.Item label={isLDSN ? "复核人电话" : "监测人员电话"} field="monitortel">
+                  <Input placeholder={isLDSN ? "复核人电话" : "监测人员电话"} />
+                </Form.Item>
+              </Grid.Col>
+            </Grid.Row>
+            <Grid.Row gutter={24}>
+              <Grid.Col span={8}>
+                <Form.Item label={isLDSN ? "监理工程师" : "监理人员"} field="supervisorname">
+                  <Input placeholder={isLDSN ? "监理工程师" : "监理人员姓名"} />
+                </Form.Item>
+              </Grid.Col>
+              <Grid.Col span={8}>
+                <Form.Item label={isLDSN ? "监理身份证" : "监理人员编号"} field="supervisorno">
+                  <Input placeholder={isLDSN ? "监理身份证" : "监理人员编号"} />
+                </Form.Item>
+              </Grid.Col>
+              <Grid.Col span={8}>
+                <Form.Item label={isLDSN ? "监理电话" : "监理人员电话"} field="supervisortel">
+                  <Input placeholder={isLDSN ? "监理电话" : "监理人员电话"} />
                 </Form.Item>
               </Grid.Col>
             </Grid.Row>
 
-            <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>预报结论</div>
+            <div style={{ backgroundColor: '#F7F8FA', padding: '10px', marginBottom: '10px', marginTop: '20px', fontWeight: 'bold' }}>
+              {isLDSN ? '其他信息' : '预报结论'}
+            </div>
             <Grid.Row gutter={24}>
               <Grid.Col span={24}>
-                <Form.Item label="预报结论" field="conclusionyb">
-                  <TextArea rows={4} placeholder="请输入预报结论" />
+                <Form.Item label={isLDSN ? "预报分段结论" : "预报结论"} field="conclusionyb">
+                  <TextArea 
+                    rows={4} 
+                    placeholder={isLDSN ? "请输入预报分段结论" : "请输入预报结论"}
+                    maxLength={512}
+                    showWordLimit
+                  />
                 </Form.Item>
               </Grid.Col>
             </Grid.Row>
             <Grid.Row gutter={24}>
               <Grid.Col span={24}>
-                <Form.Item label="处理建议" field="suggestion">
-                  <TextArea rows={4} placeholder="请输入处理建议" />
+                <Form.Item label={isLDSN ? "后续建议" : "处理建议"} field="suggestion">
+                  <TextArea 
+                    rows={4} 
+                    placeholder={isLDSN ? "请输入后续建议" : "请输入处理建议"}
+                    maxLength={512}
+                    showWordLimit
+                  />
                 </Form.Item>
               </Grid.Col>
             </Grid.Row>
+            {!isLDSN && (
+              <Grid.Row gutter={24}>
+                <Grid.Col span={24}>
+                  <Form.Item label="解决方案" field="solution">
+                    <TextArea rows={3} placeholder="请输入解决方案" />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+            )}
             <Grid.Row gutter={24}>
               <Grid.Col span={24}>
-                <Form.Item label="解决方案" field="solution">
-                  <TextArea rows={3} placeholder="请输入解决方案" />
+                <Form.Item label={isLDSN ? "实际采取措施" : "备注"} field={isLDSN ? "solution" : "remark"}>
+                  <TextArea 
+                    rows={3} 
+                    placeholder={isLDSN ? "请输入实际采取措施" : "请输入备注信息"}
+                    maxLength={512}
+                    showWordLimit
+                  />
                 </Form.Item>
               </Grid.Col>
             </Grid.Row>
-            <Grid.Row gutter={24}>
-              <Grid.Col span={24}>
-                <Form.Item label="备注" field="remark">
-                  <TextArea rows={3} placeholder="请输入备注信息" />
-                </Form.Item>
-              </Grid.Col>
-            </Grid.Row>
+            {!isLDSN && (
+              <Grid.Row gutter={24}>
+                <Grid.Col span={24}>
+                  <Form.Item label="备注" field="remark">
+                    <TextArea 
+                      rows={3} 
+                      placeholder="请输入备注信息"
+                      maxLength={512}
+                      showWordLimit
+                    />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+            )}
+            {isLDSN && (
+              <Grid.Row gutter={24}>
+                <Grid.Col span={24}>
+                  <Form.Item label="备注" field="remark">
+                    <TextArea 
+                      rows={3} 
+                      placeholder="请输入备注"
+                      maxLength={512}
+                      showWordLimit
+                    />
+                  </Form.Item>
+                </Grid.Col>
+              </Grid.Row>
+            )}
           </TabPane>
           <TabPane key="segments" title="分段信息">
             <TspSegmentsTab
@@ -1596,7 +1659,9 @@ function GeologyForecastEditPage() {
               <Space size="large">
                 <Button onClick={() => navigate(-1)}>取消</Button>
                 <Button type="primary" icon={<IconSave />} onClick={() => {
-                  console.log('🔴 保存按钮被点击了！');
+                  console.log('🔴🔴🔴 保存按钮被点击了！时间:', new Date().toISOString());
+                  console.log('🔴 当前form:', form);
+                  console.log('🔴 form.getFieldsValue():', form.getFieldsValue());
                   handleSave();
                 }}>
                   保存

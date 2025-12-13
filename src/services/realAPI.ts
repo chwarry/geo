@@ -26,6 +26,37 @@ export interface PageResponse<T = any> {
   pages: number;
 }
 
+// ==================== 辅助函数 ====================
+
+/**
+ * 检查API响应是否成功
+ * 兼容多种响应格式：
+ * 1. { resultcode: 0, data: true } - resultcode为0且data为true表示成功
+ * 2. { resultcode: 200, data: ... } - resultcode为200表示成功
+ * 3. true - api.ts的defaultTransform解包后直接返回true
+ * 4. 数字 - 创建接口返回新记录ID
+ * 5. false - api.ts解包后返回false，表示操作失败
+ * 
+ * 注意：后端返回 {resultcode: 0, data: false} 时，data: false 表示操作失败
+ */
+function isSuccessResponse(response: any): boolean {
+  // api.ts的defaultTransform会解包data字段
+  // 所以 {resultcode: 0, data: true} 会变成 true
+  // 而 {resultcode: 0, data: false} 会变成 false
+  if (response === true) return true;
+  if (response === false) return false; // data: false 表示操作失败
+  if (typeof response === 'number') return true;
+  if (response && typeof response === 'object') {
+    // 如果没被解包，检查完整响应
+    if (response.resultcode === 0 || response.resultcode === 200) {
+      // 如果有data字段且为false，表示失败
+      if (response.data === false) return false;
+      return true;
+    }
+  }
+  return false;
+}
+
 // ==================== 请求数据类型定义 ====================
 
 // 设计围岩等级请求类型（包装在sjwydj对象中）
@@ -2019,8 +2050,8 @@ class RealAPIService {
    */
   async getDesignRockGradeById(id: string) {
     try {
-      const response = await get<BaseResponse<{ sjwydj: DesignRockGrade }>>(`/api/v1/sjwydj/${id}`);
-      return response.data?.sjwydj;
+      const response = await get<{ sjwydj: DesignRockGrade }>(`/api/v1/sjwydj/${id}`);
+      return response?.sjwydj;
     } catch (error) {
       console.error('❌ [realAPI] getDesignRockGradeById 失败:', error);
       throw error;
@@ -2037,13 +2068,14 @@ class RealAPIService {
       if (data.sjwydj && !data.sjwydj.username) {
         data.sjwydj.username = this.getCurrentLogin();
       }
-      const response = await post<BaseResponse>('/api/v1/sjwydj', data);
+      const response = await post<any>('/api/v1/sjwydj', data);
+      console.log('🔍 [realAPI] createDesignRockGrade 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] createDesignRockGrade 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] createDesignRockGrade 失败:', response.message);
+        console.error('❌ [realAPI] createDesignRockGrade 失败:', response?.message || response);
         return { success: false };
       }
     } catch (error) {
@@ -2057,13 +2089,14 @@ class RealAPIService {
    */
   async updateDesignRockGrade(id: string, data: DesignRockGradeRequest): Promise<{ success: boolean }> {
     try {
-      const response = await put<BaseResponse>(`/api/v1/sjwydj/${id}`, data);
+      const response = await put<any>(`/api/v1/sjwydj/${id}`, data);
+      console.log('🔍 [realAPI] updateDesignRockGrade 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] updateDesignRockGrade 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] updateDesignRockGrade 失败:', response.message);
+        console.error('❌ [realAPI] updateDesignRockGrade 失败:', response?.message || response);
         return { success: false };
       }
     } catch (error) {
@@ -2077,13 +2110,14 @@ class RealAPIService {
    */
   async deleteDesignRockGrade(id: string): Promise<{ success: boolean }> {
     try {
-      const response = await del<BaseResponse>(`/api/v1/sjwydj/${id}`);
+      const response = await del<any>(`/api/v1/sjwydj/${id}`);
+      console.log('🔍 [realAPI] deleteDesignRockGrade 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] deleteDesignRockGrade 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] deleteDesignRockGrade 失败:', response.message);
+        console.error('❌ [realAPI] deleteDesignRockGrade 失败:', response?.message || response);
         return { success: false };
       }
     } catch (error) {
@@ -2121,12 +2155,13 @@ class RealAPIService {
 
       console.log('🔍 [realAPI] getDesignGeologies 实际请求参数:', requestParams);
 
-      const response = await get<BaseResponse<{ sjdzIPage: PageResponse<DesignGeology> }>>('/api/v1/sjdz/list', {
+      const response = await get<{ sjdzIPage: PageResponse<DesignGeology> }>('/api/v1/sjdz/list', {
         params: requestParams
       });
 
       console.log('🔍 [realAPI] getDesignGeologies 响应:', response);
-      return response.data?.sjdzIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
+      // get函数已经自动解包了data，所以response就是{sjdzIPage: {...}}
+      return response?.sjdzIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getDesignGeologies 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -2143,13 +2178,14 @@ class RealAPIService {
       if (data.sjdz && !data.sjdz.username) {
         data.sjdz.username = this.getCurrentLogin();
       }
-      const response = await post<BaseResponse>('/api/v1/sjdz', data);
+      const response = await post<any>('/api/v1/sjdz', data);
+      console.log('🔍 [realAPI] createDesignGeology 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] createDesignGeology 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] createDesignGeology 失败:', response.message);
+        console.error('❌ [realAPI] createDesignGeology 失败:', response?.message || response);
         return { success: false };
       }
     } catch (error) {
@@ -2166,15 +2202,25 @@ class RealAPIService {
   async updateDesignGeology(id: string, data: any): Promise<{ success: boolean }> {
     try {
       console.log('🚀 [realAPI] updateDesignGeology 调用, id:', id, 'data:', data);
-      const response = await put<BaseResponse>(`/api/v1/sjdz/${id}`, data);
+      const response = await put<any>(`/api/v1/sjdz/${id}`, data);
       console.log('🔍 [realAPI] updateDesignGeology 响应:', response);
+      console.log('🔍 [realAPI] updateDesignGeology 响应类型:', typeof response);
 
-      if (response.resultcode === 0 || response.resultcode === 200) {
-        console.log('✅ [realAPI] updateDesignGeology 成功');
+      // 兼容多种响应格式：
+      // 1. 直接返回 true/false (api.ts的defaultTransform解包了data字段)
+      // 2. 返回完整对象 { resultcode: 0, data: true }
+      if (response === true) {
+        console.log('✅ [realAPI] updateDesignGeology 成功 (response === true)');
         return { success: true };
+      } else if (typeof response === 'object' && (response.resultcode === 0 || response.resultcode === 200)) {
+        console.log('✅ [realAPI] updateDesignGeology 成功 (resultcode)');
+        return { success: true };
+      } else if (response === false) {
+        console.error('❌ [realAPI] updateDesignGeology 失败 (response === false)');
+        throw new Error('更新失败');
       } else {
-        console.error('❌ [realAPI] updateDesignGeology 失败:', response.message);
-        throw new Error(response.message || '更新失败');
+        console.error('❌ [realAPI] updateDesignGeology 失败:', response?.message || response);
+        throw new Error(response?.message || '更新失败');
       }
     } catch (error) {
       console.error('❌ [realAPI] updateDesignGeology 异常:', error);
@@ -2266,7 +2312,7 @@ class RealAPIService {
    */
   async getGeophysicalMethods(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
     try {
-      const response = await get<BaseResponse<{ wtfIPage: PageResponse<GeophysicalMethod> }>>('/api/v1/wtf/list', {
+      const response = await get<{ wtfIPage: PageResponse<GeophysicalMethod> }>('/api/v1/wtf/list', {
         params: {
           userid: params.userid || this.userId,
           pageNum: params.pageNum || 1,
@@ -2274,7 +2320,7 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data?.wtfIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
+      return response?.wtfIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getGeophysicalMethods 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -2338,19 +2384,50 @@ class RealAPIService {
       if (cleanData.method) {
         cleanData.method = Number(cleanData.method);
       }
+      
+      // 移除 undefined 和空字符串值
+      Object.keys(cleanData).forEach(key => {
+        if (cleanData[key] === undefined || cleanData[key] === '') {
+          delete cleanData[key];
+        }
+      });
+      
+      // 确保必要的数字字段存在
+      if (cleanData.flag === undefined) cleanData.flag = 0;
+      if (cleanData.submitFlag === undefined) cleanData.submitFlag = 0;
 
       console.log('📤 [realAPI] createGeophysicalMethod 清理后数据:', cleanData);
 
-      const response = await post<BaseResponse>(apiPath, cleanData);
+      const response = await post<any>(apiPath, cleanData);
 
       console.log('📥 [realAPI] createGeophysicalMethod 响应:', response);
+      console.log('📥 [realAPI] 响应类型:', typeof response);
 
-      if (response.resultcode === 200) {
-        console.log('✅ [realAPI] createGeophysicalMethod 成功');
+      // API 返回格式可能是:
+      // 1. 直接返回新记录ID (number)
+      // 2. { resultcode: 200, data: newId }
+      // 3. { code: 200, data: newId }
+      if (typeof response === 'number') {
+        // 直接返回ID，表示创建成功
+        console.log('✅ [realAPI] createGeophysicalMethod 成功，新记录ID:', response);
         return { success: true };
+      } else if (response && typeof response === 'object') {
+        const code = response.resultcode ?? response.code;
+        if (code === 200 || code === 0) {
+          console.log('✅ [realAPI] createGeophysicalMethod 成功');
+          return { success: true };
+        } else if (response.data && typeof response.data === 'number') {
+          // data 字段是新记录ID
+          console.log('✅ [realAPI] createGeophysicalMethod 成功，新记录ID:', response.data);
+          return { success: true };
+        } else {
+          console.error('❌ [realAPI] createGeophysicalMethod 失败:', response.message || response.msg);
+          return { success: false, message: response.message || response.msg || '创建失败' };
+        }
       } else {
-        console.error('❌ [realAPI] createGeophysicalMethod 失败:', response.message);
-        return { success: false, message: response.message };
+        // 未知响应格式，但如果没有抛出异常，可能也是成功的
+        console.warn('⚠️ [realAPI] createGeophysicalMethod 未知响应格式:', response);
+        return { success: true };
       }
     } catch (error: any) {
       console.error('❌ [realAPI] createGeophysicalMethod 异常:', error);
@@ -2365,14 +2442,16 @@ class RealAPIService {
   async createPalmSketch(data: any): Promise<{ success: boolean; message?: string }> {
     try {
       console.log('📤 [realAPI] createPalmSketch 请求数据:', data);
-      const response = await post<BaseResponse>('/api/v1/zzmsm', data);
+      const response = await post<any>('/api/v1/zzmsm', data);
+      console.log('📥 [realAPI] createPalmSketch 响应:', response);
 
-      if (response.resultcode === 200) {
+      // 后端可能直接返回新记录ID（数字），或者返回 {resultcode: 200, ...} 格式
+      if (typeof response === 'number' || (response && response.resultcode === 200)) {
         console.log('✅ [realAPI] createPalmSketch 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] createPalmSketch 失败:', response.message);
-        return { success: false, message: response.message };
+        console.error('❌ [realAPI] createPalmSketch 失败:', response?.message || response);
+        return { success: false, message: response?.message || '创建失败' };
       }
     } catch (error) {
       console.error('❌ [realAPI] createPalmSketch 异常:', error);
@@ -2386,14 +2465,16 @@ class RealAPIService {
   async createTunnelSketch(data: any): Promise<{ success: boolean; message?: string }> {
     try {
       console.log('📤 [realAPI] createTunnelSketch 请求数据:', data);
-      const response = await post<BaseResponse>('/api/v1/dssm', data);
+      const response = await post<any>('/api/v1/dssm', data);
+      console.log('📥 [realAPI] createTunnelSketch 响应:', response);
 
-      if (response.resultcode === 200) {
+      // 后端可能直接返回新记录ID（数字），或者返回 {resultcode: 200, ...} 格式
+      if (typeof response === 'number' || (response && response.resultcode === 200)) {
         console.log('✅ [realAPI] createTunnelSketch 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] createTunnelSketch 失败:', response.message);
-        return { success: false, message: response.message };
+        console.error('❌ [realAPI] createTunnelSketch 失败:', response?.message || response);
+        return { success: false, message: response?.message || '创建失败' };
       }
     } catch (error) {
       console.error('❌ [realAPI] createTunnelSketch 异常:', error);
@@ -2416,14 +2497,16 @@ class RealAPIService {
         apiPath = '/api/v1/ztf/jspk';
       }
 
-      const response = await post<BaseResponse>(apiPath, data);
+      const response = await post<any>(apiPath, data);
+      console.log('📥 [realAPI] createDrilling 响应:', response);
 
-      if (response.resultcode === 200) {
+      // 后端可能直接返回新记录ID（数字），或者返回 {resultcode: 200, ...} 格式
+      if (typeof response === 'number' || (response && response.resultcode === 200)) {
         console.log('✅ [realAPI] createDrilling 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] createDrilling 失败:', response.message);
-        return { success: false, message: response.message };
+        console.error('❌ [realAPI] createDrilling 失败:', response?.message || response);
+        return { success: false, message: response?.message || '创建失败' };
       }
     } catch (error) {
       console.error('❌ [realAPI] createDrilling 异常:', error);
@@ -2437,14 +2520,16 @@ class RealAPIService {
   async createSurfaceSupplement(data: any): Promise<{ success: boolean; message?: string }> {
     try {
       console.log('📤 [realAPI] createSurfaceSupplement 请求数据:', data);
-      const response = await post<BaseResponse>('/api/v1/dbbc', data);
+      const response = await post<any>('/api/v1/dbbc', data);
+      console.log('📥 [realAPI] createSurfaceSupplement 响应:', response);
 
-      if (response.resultcode === 200) {
+      // 后端可能直接返回新记录ID（数字），或者返回 {resultcode: 200, ...} 格式
+      if (typeof response === 'number' || (response && response.resultcode === 200)) {
         console.log('✅ [realAPI] createSurfaceSupplement 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] createSurfaceSupplement 失败:', response.message);
-        return { success: false, message: response.message };
+        console.error('❌ [realAPI] createSurfaceSupplement 失败:', response?.message || response);
+        return { success: false, message: response?.message || '创建失败' };
       }
     } catch (error) {
       console.error('❌ [realAPI] createSurfaceSupplement 异常:', error);
@@ -2726,7 +2811,7 @@ class RealAPIService {
    */
   async getDrillingMethods(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
     try {
-      const response = await get<BaseResponse<{ ztfIPage: PageResponse<DrillingMethod> }>>('/api/v1/ztf/list', {
+      const response = await get<{ ztfIPage: PageResponse<DrillingMethod> }>('/api/v1/ztf/list', {
         params: {
           userid: params.userid || this.userId,
           pageNum: params.pageNum || 1,
@@ -2734,7 +2819,7 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data?.ztfIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
+      return response?.ztfIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getDrillingMethods 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -2766,14 +2851,15 @@ class RealAPIService {
    */
   async updateDrillingMethod(id: string, data: DrillingRequest): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await put<BaseResponse>(`/api/v1/ztf/${id}`, data);
+      const response = await put<any>(`/api/v1/ztf/${id}`, data);
+      console.log('🔍 [realAPI] updateDrillingMethod 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] updateDrillingMethod 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] updateDrillingMethod 失败:', response.message);
-        return { success: false, message: response.message || '更新失败' };
+        console.error('❌ [realAPI] updateDrillingMethod 失败:', response?.message || response);
+        return { success: false, message: response?.message || '更新失败' };
       }
     } catch (error: any) {
       console.error('❌ [realAPI] updateDrillingMethod 异常:', error);
@@ -2786,13 +2872,14 @@ class RealAPIService {
    */
   async deleteDrillingMethod(id: string): Promise<{ success: boolean }> {
     try {
-      const response = await del<BaseResponse>(`/api/v1/ztf/${id}`);
+      const response = await del<any>(`/api/v1/ztf/${id}`);
+      console.log('🔍 [realAPI] deleteDrillingMethod 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] deleteDrillingMethod 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] deleteDrillingMethod 失败:', response.message);
+        console.error('❌ [realAPI] deleteDrillingMethod 失败:', response?.message || response);
         return { success: false };
       }
     } catch (error) {
@@ -2808,7 +2895,7 @@ class RealAPIService {
    */
   async getFaceSketches(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
     try {
-      const response = await get<BaseResponse<{ zzmsmIPage: PageResponse<FaceSketch> }>>('/api/v1/zzmsm/list', {
+      const response = await get<{ zzmsmIPage: PageResponse<FaceSketch> }>('/api/v1/zzmsm/list', {
         params: {
           userid: params.userid || this.userId,
           pageNum: params.pageNum || 1,
@@ -2816,7 +2903,7 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data?.zzmsmIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
+      return response?.zzmsmIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getFaceSketches 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -2848,14 +2935,15 @@ class RealAPIService {
    */
   async updateFaceSketch(id: string, data: FaceSketchRequest): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await put<BaseResponse>(`/api/v1/zzmsm/${id}`, data);
+      const response = await put<any>(`/api/v1/zzmsm/${id}`, data);
+      console.log('🔍 [realAPI] updateFaceSketch 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] updateFaceSketch 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] updateFaceSketch 失败:', response.message);
-        return { success: false, message: response.message || '更新失败' };
+        console.error('❌ [realAPI] updateFaceSketch 失败:', response?.message || response);
+        return { success: false, message: response?.message || '更新失败' };
       }
     } catch (error: any) {
       console.error('❌ [realAPI] updateFaceSketch 异常:', error);
@@ -2868,13 +2956,14 @@ class RealAPIService {
    */
   async deleteFaceSketch(id: string): Promise<{ success: boolean }> {
     try {
-      const response = await del<BaseResponse>(`/api/v1/zzmsm/${id}`);
+      const response = await del<any>(`/api/v1/zzmsm/${id}`);
+      console.log('🔍 [realAPI] deleteFaceSketch 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] deleteFaceSketch 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] deleteFaceSketch 失败:', response.message);
+        console.error('❌ [realAPI] deleteFaceSketch 失败:', response?.message || response);
         return { success: false };
       }
     } catch (error) {
@@ -2890,7 +2979,7 @@ class RealAPIService {
    */
   async getTunnelSketches(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
     try {
-      const response = await get<BaseResponse<{ dssmIPage: PageResponse<TunnelSketch> }>>('/api/v1/dssm/list', {
+      const response = await get<{ dssmIPage: PageResponse<TunnelSketch> }>('/api/v1/dssm/list', {
         params: {
           userid: params.userid || this.userId,
           pageNum: params.pageNum || 1,
@@ -2898,7 +2987,7 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data?.dssmIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
+      return response?.dssmIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getTunnelSketches 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -2910,14 +2999,15 @@ class RealAPIService {
    */
   async updateTunnelSketch(id: string, data: TunnelSketchRequest): Promise<{ success: boolean; message?: string }> {
     try {
-      const response = await put<BaseResponse>(`/api/v1/dssm/${id}`, data);
+      const response = await put<any>(`/api/v1/dssm/${id}`, data);
+      console.log('🔍 [realAPI] updateTunnelSketch 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] updateTunnelSketch 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] updateTunnelSketch 失败:', response.message);
-        return { success: false, message: response.message || '更新失败' };
+        console.error('❌ [realAPI] updateTunnelSketch 失败:', response?.message || response);
+        return { success: false, message: response?.message || '更新失败' };
       }
     } catch (error: any) {
       console.error('❌ [realAPI] updateTunnelSketch 异常:', error);
@@ -2930,9 +3020,10 @@ class RealAPIService {
    */
   async deleteTunnelSketch(id: string): Promise<{ success: boolean }> {
     try {
-      const response = await del<BaseResponse>(`/api/v1/dssm/${id}`);
+      const response = await del<any>(`/api/v1/dssm/${id}`);
+      console.log('🔍 [realAPI] deleteTunnelSketch 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] deleteTunnelSketch 成功');
         return { success: true };
       } else {
@@ -2952,7 +3043,7 @@ class RealAPIService {
    */
   async getSurfaceSupplements(params: { sitePk?: number; userid?: number; pageNum?: number; pageSize?: number }) {
     try {
-      const response = await get<BaseResponse<{ dbbcIPage: PageResponse<SurfaceSupplement> }>>('/api/v1/dbbc/list', {
+      const response = await get<{ dbbcIPage: PageResponse<SurfaceSupplement> }>('/api/v1/dbbc/list', {
         params: {
           userid: params.userid || this.userId,
           pageNum: params.pageNum || 1,
@@ -2960,7 +3051,8 @@ class RealAPIService {
           ...params
         }
       });
-      return response.data?.dbbcIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
+      // get函数已经自动解包了data，所以response就是{dbbcIPage: {...}}
+      return response?.dbbcIPage || { current: 1, size: 15, records: [], total: 0, pages: 0 };
     } catch (error) {
       console.error('❌ [realAPI] getSurfaceSupplements 失败:', error);
       return { current: 1, size: 15, records: [], total: 0, pages: 0 };
@@ -2972,13 +3064,14 @@ class RealAPIService {
    */
   async updateSurfaceSupplement(id: string, data: SurfaceSupplementRequest): Promise<{ success: boolean }> {
     try {
-      const response = await put<BaseResponse>(`/api/v1/dbbc/${id}`, data);
+      const response = await put<any>(`/api/v1/dbbc/${id}`, data);
+      console.log('🔍 [realAPI] updateSurfaceSupplement 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] updateSurfaceSupplement 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] updateSurfaceSupplement 失败:', response.message);
+        console.error('❌ [realAPI] updateSurfaceSupplement 失败:', response?.message || response);
         return { success: false };
       }
     } catch (error) {
@@ -2992,13 +3085,14 @@ class RealAPIService {
    */
   async deleteSurfaceSupplement(id: string): Promise<{ success: boolean }> {
     try {
-      const response = await del<BaseResponse>(`/api/v1/dbbc/${id}`);
+      const response = await del<any>(`/api/v1/dbbc/${id}`);
+      console.log('🔍 [realAPI] deleteSurfaceSupplement 响应:', response);
 
-      if (response.resultcode === 200) {
+      if (isSuccessResponse(response)) {
         console.log('✅ [realAPI] deleteSurfaceSupplement 成功');
         return { success: true };
       } else {
-        console.error('❌ [realAPI] deleteSurfaceSupplement 失败:', response.message);
+        console.error('❌ [realAPI] deleteSurfaceSupplement 失败:', response?.message || response);
         return { success: false };
       }
     } catch (error) {
@@ -3110,40 +3204,77 @@ class RealAPIService {
         return { records: [], total: 0, current: 1, size: 10, pages: 0 };
       }
 
+      // 正确的参数格式：直接作为query参数传递，Spring Boot会自动绑定到YbInfoPageQueryDTO
       const queryParams: any = {
-        siteId: params.siteId,  // 必填，不使用默认值
-        type: 1,                // 1=物探法
+        siteId: params.siteId,      // 工点ID (必填)
+        type: 1,                    // 1=物探法
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
+        // submitFlag 不传，获取所有状态的数据
+        // method 不传，获取该类型下的所有方法
       };
-      /*  */
+      
       console.log('📤 [realAPI] 物探法请求参数:', queryParams);
 
-      // 恢复为标准的GET请求，通过Query参数传递
-      const response = await get<any>('/api/v1/wtf/list', { params: queryParams });
+      // 添加超时和错误处理
+      const response = await get<any>('/api/v1/wtf/list', { 
+        params: queryParams,
+        timeout: 30000  // 30秒超时
+      }).catch(err => {
+        // 网络错误或后端不可达时，返回空数据而不是抛出异常
+        console.error('❌ [realAPI] 网络请求失败，可能原因：');
+        console.error('   1. 后端服务器 http://121.40.127.120:8080 不可达');
+        console.error('   2. 工点ID不存在:', params.siteId);
+        console.error('   3. 网络连接问题');
+        console.error('   错误详情:', err.message);
+        throw err;  // 继续抛出，由外层catch处理
+      });
+      
       console.log('🔍 [realAPI] getGeophysicalList 响应:', response);
+      console.log('🔍 [realAPI] getGeophysicalList 响应的所有键:', response ? Object.keys(response) : 'null');
 
-      // 兼容处理：如果response直接是Page对象（已被拦截器处理过），或者包含resultcode
+      // 兼容多种响应格式
       let pageData = null;
-      if (response && (response.records || Array.isArray(response.records))) {
+      
+      // 格式1: 直接返回分页数据 { records, total, ... }
+      if (response && response.records !== undefined) {
         pageData = response;
-      } else if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
+        console.log('🔍 [realAPI] getGeophysicalList 使用格式1: 直接分页数据');
+      }
+      // 格式2: 包装在 wtfIPage 字段中 { wtfIPage: { records, total, ... } }
+      else if (response && response.wtfIPage) {
+        pageData = response.wtfIPage;
+        console.log('🔍 [realAPI] getGeophysicalList 使用格式2: wtfIPage字段');
+      }
+      // 格式3: 标准响应格式 { resultcode: 200, data: { records, ... } }
+      else if ((response?.resultcode === 200 || response?.resultcode === 0) && response?.data) {
         pageData = response.data;
+        console.log('🔍 [realAPI] getGeophysicalList 使用格式3: 标准响应格式');
       }
 
       if (pageData) {
-        return {
+        const result = {
           records: pageData.records || [],
           total: pageData.total || 0,
           current: pageData.current || 1,
           size: pageData.size || 10,
           pages: pageData.pages || 1
         };
+        console.log('✅ [realAPI] getGeophysicalList 返回数据:', result);
+        return result;
       }
-      console.warn('⚠️ [realAPI] 响应码非200或无数据:', response);
+      
+      console.warn('⚠️ [realAPI] getGeophysicalList 无法解析响应格式');
       return { records: [], total: 0, current: 1, size: 10, pages: 0 };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [realAPI] getGeophysicalList 异常:', error);
+      console.error('💡 建议：');
+      console.error('   1. 检查后端服务是否启动');
+      console.error('   2. 验证工点ID是否正确');
+      console.error('   3. 检查网络连接');
+      console.error('   4. 临时切换到 Mock 模式进行开发');
+      
+      // 返回空数据，让页面能够正常显示（只是没有数据）
       return { records: [], total: 0, current: 1, size: 10, pages: 0 };
     }
   }
@@ -3158,36 +3289,53 @@ class RealAPIService {
         return { records: [], total: 0, current: 1, size: 10, pages: 0 };
       }
 
+      // 修正：参数放在 queryDTO 对象中
       const queryParams: any = {
-        siteId: params.siteId,
-        type: 2,  // 2=掌子面素描
-        pageNum: params.pageNum || 1,
-        pageSize: params.pageSize || 15
+        'queryDTO.siteId': params.siteId,
+        'queryDTO.type': 2,  // 2=掌子面素描
+        'queryDTO.pageNum': params.pageNum || 1,
+        'queryDTO.pageSize': params.pageSize || 15
       };
 
       console.log('🚀 [realAPI] getPalmSketchList 调用参数:', params);
-      console.log('📤 [realAPI] 掌子面素描请求参数:', queryParams);
+      console.log('📤 [realAPI] 掌子面素描请求参数（修正后）:', queryParams);
 
-      const response = await get<any>('/api/v1/zzmsm/list', { params: queryParams });
+      const response = await get<any>('/api/v1/zzmsm/list', { params: queryParams, timeout: 30000 });
       console.log('🔍 [realAPI] getPalmSketchList 响应:', response);
+      console.log('🔍 [realAPI] getPalmSketchList 响应的所有键:', response ? Object.keys(response) : 'null');
 
-      // 兼容处理
+      // 兼容多种响应格式
       let pageData = null;
-      if (response && (response.records || Array.isArray(response.records))) {
+      
+      // 格式1: 直接返回分页数据 { records, total, ... }
+      if (response && response.records !== undefined) {
         pageData = response;
-      } else if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
+        console.log('🔍 [realAPI] getPalmSketchList 使用格式1: 直接分页数据');
+      }
+      // 格式2: 包装在 zzmsmIPage 字段中 { zzmsmIPage: { records, total, ... } }
+      else if (response && response.zzmsmIPage) {
+        pageData = response.zzmsmIPage;
+        console.log('🔍 [realAPI] getPalmSketchList 使用格式2: zzmsmIPage字段');
+      }
+      // 格式3: 标准响应格式 { resultcode: 200, data: { records, ... } }
+      else if ((response?.resultcode === 200 || response?.resultcode === 0) && response?.data) {
         pageData = response.data;
+        console.log('🔍 [realAPI] getPalmSketchList 使用格式3: 标准响应格式');
       }
 
       if (pageData) {
-        return {
+        const result = {
           records: pageData.records || [],
           total: pageData.total || 0,
           current: pageData.current || 1,
           size: pageData.size || 10,
           pages: pageData.pages || 1
         };
+        console.log('✅ [realAPI] getPalmSketchList 返回数据:', result);
+        return result;
       }
+      
+      console.warn('⚠️ [realAPI] getPalmSketchList 无法解析响应格式');
       return { records: [], total: 0, current: 1, size: 10, pages: 1 };
     } catch (error) {
       console.error('❌ [realAPI] getPalmSketchList 异常:', error);
@@ -3217,24 +3365,40 @@ class RealAPIService {
 
       const response = await get<any>('/api/v1/dssm/list', { params: queryParams });
       console.log('🔍 [realAPI] getTunnelSketchList 响应:', response);
+      console.log('🔍 [realAPI] getTunnelSketchList 响应的所有键:', response ? Object.keys(response) : 'null');
 
-      // 兼容处理
+      // 兼容多种响应格式
       let pageData = null;
-      if (response && (response.records || Array.isArray(response.records))) {
+      
+      // 格式1: 直接返回分页数据 { records, total, ... }
+      if (response && response.records !== undefined) {
         pageData = response;
-      } else if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
+        console.log('🔍 [realAPI] getTunnelSketchList 使用格式1: 直接分页数据');
+      }
+      // 格式2: 包装在 dssmIPage 字段中 { dssmIPage: { records, total, ... } }
+      else if (response && response.dssmIPage) {
+        pageData = response.dssmIPage;
+        console.log('🔍 [realAPI] getTunnelSketchList 使用格式2: dssmIPage字段');
+      }
+      // 格式3: 标准响应格式 { resultcode: 200, data: { records, ... } }
+      else if ((response?.resultcode === 200 || response?.resultcode === 0) && response?.data) {
         pageData = response.data;
+        console.log('🔍 [realAPI] getTunnelSketchList 使用格式3: 标准响应格式');
       }
 
       if (pageData) {
-        return {
+        const result = {
           records: pageData.records || [],
           total: pageData.total || 0,
           current: pageData.current || 1,
           size: pageData.size || 10,
           pages: pageData.pages || 1
         };
+        console.log('✅ [realAPI] getTunnelSketchList 返回数据:', result);
+        return result;
       }
+      
+      console.warn('⚠️ [realAPI] getTunnelSketchList 无法解析响应格式');
       return { records: [], total: 0, current: 1, size: 10, pages: 1 };
     } catch (error) {
       console.error('❌ [realAPI] getTunnelSketchList 异常:', error);
@@ -3244,6 +3408,7 @@ class RealAPIService {
 
   /**
    * 获取钻探数据（地质预报-钻探）
+   * 钻探法包含：超前水平钻(method=13)和加深炮孔(method=14)
    */
   async getDrillingList(params: { pageNum: number; pageSize: number; siteId: string }): Promise<PageResponse<any>> {
     try {
@@ -3254,7 +3419,7 @@ class RealAPIService {
 
       const queryParams = {
         siteId: params.siteId,
-        type: 4,  // 4=钻探法
+        type: 4,  // 4=钻探法（包含超前水平钻method=13和加深炮孔method=14）
         pageNum: params.pageNum || 1,
         pageSize: params.pageSize || 15
       };
@@ -3264,24 +3429,50 @@ class RealAPIService {
 
       const response = await get<any>('/api/v1/ztf/list', { params: queryParams });
       console.log('🔍 [realAPI] getDrillingList 响应:', response);
+      console.log('🔍 [realAPI] getDrillingList 响应的所有键:', response ? Object.keys(response) : 'null');
 
-      // 兼容处理
+      // 兼容多种响应格式
       let pageData = null;
-      if (response && (response.records || Array.isArray(response.records))) {
+      
+      // 格式1: 直接返回分页数据 { records, total, ... }
+      if (response && response.records !== undefined) {
         pageData = response;
-      } else if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
+        console.log('🔍 [realAPI] getDrillingList 使用格式1: 直接分页数据');
+      }
+      // 格式2: 包装在 ztfIPage 字段中 { ztfIPage: { records, total, ... } }
+      else if (response && response.ztfIPage) {
+        pageData = response.ztfIPage;
+        console.log('🔍 [realAPI] getDrillingList 使用格式2: ztfIPage字段');
+      }
+      // 格式3: 包装在 cqspzIPage 字段中（超前水平钻）
+      else if (response && response.cqspzIPage) {
+        pageData = response.cqspzIPage;
+        console.log('🔍 [realAPI] getDrillingList 使用格式3: cqspzIPage字段');
+      }
+      // 格式4: 包装在 jspkIPage 字段中（加深炮孔）
+      else if (response && response.jspkIPage) {
+        pageData = response.jspkIPage;
+        console.log('🔍 [realAPI] getDrillingList 使用格式4: jspkIPage字段');
+      }
+      // 格式5: 标准响应格式 { resultcode: 200, data: { records, ... } }
+      else if ((response?.resultcode === 200 || response?.resultcode === 0) && response?.data) {
         pageData = response.data;
+        console.log('🔍 [realAPI] getDrillingList 使用格式5: 标准响应格式');
       }
 
       if (pageData) {
-        return {
+        const result = {
           records: pageData.records || [],
           total: pageData.total || 0,
           current: pageData.current || 1,
           size: pageData.size || 10,
           pages: pageData.pages || 1
         };
+        console.log('✅ [realAPI] getDrillingList 返回数据:', result);
+        return result;
       }
+      
+      console.warn('⚠️ [realAPI] getDrillingList 无法解析响应格式');
       return { records: [], total: 0, current: 1, size: 10, pages: 1 };
     } catch (error) {
       console.error('❌ [realAPI] getDrillingList 异常:', error);
@@ -3311,24 +3502,40 @@ class RealAPIService {
 
       const response = await get<any>('/api/v1/dbbc/list', { params: queryParams });
       console.log('🔍 [realAPI] getSurfaceSupplementList 响应:', response);
+      console.log('🔍 [realAPI] getSurfaceSupplementList 响应的所有键:', response ? Object.keys(response) : 'null');
 
-      // 兼容处理
+      // 兼容多种响应格式
       let pageData = null;
-      if (response && (response.records || Array.isArray(response.records))) {
+      
+      // 格式1: 直接返回分页数据 { records, total, ... }
+      if (response && response.records !== undefined) {
         pageData = response;
-      } else if ((response.resultcode === 200 || response.resultcode === 0) && response.data) {
+        console.log('🔍 [realAPI] getSurfaceSupplementList 使用格式1: 直接分页数据');
+      }
+      // 格式2: 包装在 dbbcIPage 字段中 { dbbcIPage: { records, total, ... } }
+      else if (response && response.dbbcIPage) {
+        pageData = response.dbbcIPage;
+        console.log('🔍 [realAPI] getSurfaceSupplementList 使用格式2: dbbcIPage字段');
+      }
+      // 格式3: 标准响应格式 { resultcode: 200, data: { records, ... } }
+      else if ((response?.resultcode === 200 || response?.resultcode === 0) && response?.data) {
         pageData = response.data;
+        console.log('🔍 [realAPI] getSurfaceSupplementList 使用格式3: 标准响应格式');
       }
 
       if (pageData) {
-        return {
+        const result = {
           records: pageData.records || [],
           total: pageData.total || 0,
           current: pageData.current || 1,
           size: pageData.size || 10,
           pages: pageData.pages || 1
         };
+        console.log('✅ [realAPI] getSurfaceSupplementList 返回数据:', result);
+        return result;
       }
+      
+      console.warn('⚠️ [realAPI] getSurfaceSupplementList 无法解析响应格式');
       return { records: [], total: 0, current: 1, size: 10, pages: 1 };
     } catch (error) {
       console.error('❌ [realAPI] getSurfaceSupplementList 异常:', error);

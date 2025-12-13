@@ -13,7 +13,8 @@ import {
   Spin,
   Space,
   Upload,
-  Table
+  Table,
+  Modal
 } from '@arco-design/web-react'
 import { IconLeft, IconSave, IconPlus } from '@arco-design/web-react/icon'
 import apiAdapter from '../services/apiAdapter'
@@ -36,6 +37,67 @@ function PalmSketchEditPage() {
   const [activeTab, setActiveTab] = useState('basic')
   const [segmentList, setSegmentList] = useState<any[]>([])
   const [originalData, setOriginalData] = useState<any>(null) // 保存原始数据
+  
+  // 分段信息弹窗相关状态
+  const [segmentModalVisible, setSegmentModalVisible] = useState(false)
+  const [editingSegmentIndex, setEditingSegmentIndex] = useState<number | null>(null)
+  const [segmentForm] = Form.useForm()
+  const [selectedDzjb, setSelectedDzjb] = useState<string>('green')
+
+  // 打开新增分段弹窗
+  const handleOpenSegmentModal = () => {
+    setEditingSegmentIndex(null)
+    segmentForm.resetFields()
+    setSelectedDzjb('green')
+    segmentForm.setFieldsValue({
+      dkname: form.getFieldValue('dkname') || 'DK',
+      sdkilo: 0,
+      edkilo: 0,
+      ybjgTime: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      risklevel: '',
+      grade: 0,
+      wylevel: 0,
+      jlresult: '',
+      dzjb: 'green',
+    })
+    setSegmentModalVisible(true)
+  }
+
+  // 打开编辑分段弹窗
+  const handleEditSegment = (index: number) => {
+    setEditingSegmentIndex(index)
+    const segment = segmentList[index]
+    segmentForm.setFieldsValue(segment)
+    setSelectedDzjb(segment.dzjb || 'green')
+    setSegmentModalVisible(true)
+  }
+
+  // 确认添加/编辑分段
+  const handleConfirmSegment = async () => {
+    try {
+      const values = await segmentForm.validate()
+      const dataWithDzjb = { ...values, dzjb: selectedDzjb }
+      if (editingSegmentIndex !== null) {
+        // 编辑模式
+        const newSegments = [...segmentList]
+        newSegments[editingSegmentIndex] = { ...newSegments[editingSegmentIndex], ...dataWithDzjb }
+        setSegmentList(newSegments)
+      } else {
+        // 新增模式
+        setSegmentList([...segmentList, { ...dataWithDzjb, ybjgPk: 0, ybjgId: 0, ybPk: 0 }])
+      }
+      setSegmentModalVisible(false)
+    } catch (e) {
+      // 表单验证失败
+    }
+  }
+
+  // 删除分段
+  const handleDeleteSegment = (index: number) => {
+    const newSegments = [...segmentList]
+    newSegments.splice(index, 1)
+    setSegmentList(newSegments)
+  }
 
   // 获取详情数据
   useEffect(() => {
@@ -90,24 +152,33 @@ function PalmSketchEditPage() {
       
       setSaving(true)
       
+      const isNew = id === 'new'
+      
       // 合并原始数据和表单修改的数据，确保未修改的字段保留原值
       const submitData = {
         ...originalData,  // 先用原始数据
         ...values,        // 再用表单值覆盖（用户修改的部分）
-        ybPk: id,
+        ybPk: null,       // 临时设置为null，后端修复后改回
         siteId: siteId || originalData?.siteId,
+        method: 7,        // 掌子面素描的method为7
       }
       
-      console.log('📤 [掌子面素描] 提交数据:', submitData)
+      console.log('📤 [掌子面素描] 提交数据:', submitData, '是否新增:', isNew)
       
-      // 调用更新接口 - 使用真实API
-      const result = await apiAdapter.updatePalmSketch(id!, submitData)
+      let result
+      if (isNew) {
+        // 新增模式调用create接口
+        result = await apiAdapter.createPalmSketch(submitData)
+      } else {
+        // 编辑模式调用update接口
+        result = await apiAdapter.updatePalmSketch(id!, submitData)
+      }
       
       if (result?.success) {
-        Message.success('保存成功')
+        Message.success(isNew ? '新增成功' : '保存成功')
         handleBack()
       } else {
-        Message.error(result?.message || '保存失败')
+        Message.error(result?.message || (isNew ? '新增失败' : '保存失败'))
       }
     } catch (error) {
       console.error('❌ 保存失败:', error)
@@ -163,35 +234,38 @@ function PalmSketchEditPage() {
                 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="现场时间" field="monitordate">
+                    <Form.Item label="预报时间" field="monitordate" rules={[{ required: true, message: '请选择预报时间' }]}>
                       <DatePicker showTime style={{ width: '100%' }} />
                     </Form.Item>
                   </Col>
-                  <Col span={8}>
-                    <Form.Item label="里程起点" field="dkname">
-                      <Input placeholder="请输入里程起点" />
+                  <Col span={4}>
+                    <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
+                      <Input placeholder="DK" />
                     </Form.Item>
                   </Col>
-                  <Col span={4}>
-                    <Form.Item label="掌子面里程" field="dkilo">
-                      <InputNumber placeholder="里程" style={{ width: '100%' }} />
-                    </Form.Item>
-                  </Col>
-                  <Col span={4}>
-                    <Form.Item label="+" field="dkiloPlus">
-                      <InputNumber placeholder="521.2" style={{ width: '100%' }} precision={1} />
+                  <Col span={12}>
+                    <Form.Item label="掌子面里程" required>
+                      <Space>
+                        <Form.Item field="dkilo" noStyle rules={[{ required: true, message: '请输入里程值' }]}>
+                          <InputNumber placeholder="713" style={{ width: 120 }} precision={0} />
+                        </Form.Item>
+                        <span>+</span>
+                        <Form.Item field="dkiloPlus" noStyle>
+                          <InputNumber placeholder="761.6" style={{ width: 120 }} precision={1} />
+                        </Form.Item>
+                      </Space>
                     </Form.Item>
                   </Col>
                 </Row>
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="检测人" field="testname">
+                    <Form.Item label="检测人" field="testname" rules={[{ required: true, message: '请输入检测人' }]}>
                       <Input placeholder="请输入检测人" />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="检测人身份证" field="testno">
+                    <Form.Item label="检测人身份证" field="testno" rules={[{ required: true, message: '请输入检测人身份证' }]}>
                       <Input placeholder="请输入检测人身份证" />
                     </Form.Item>
                   </Col>
@@ -204,36 +278,36 @@ function PalmSketchEditPage() {
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="监理人" field="monitorname">
-                      <Input placeholder="请输入监理人" />
+                    <Form.Item label="复核人" field="monitorname" rules={[{ required: true, message: '请输入复核人' }]}>
+                      <Input placeholder="请输入复核人" />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="监理人身份证" field="monitorno">
-                      <Input placeholder="请输入监理人身份证" />
+                    <Form.Item label="复核人身份证" field="monitorno" rules={[{ required: true, message: '请输入复核人身份证' }]}>
+                      <Input placeholder="请输入复核人身份证" />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="监理电话" field="monitortel">
-                      <Input placeholder="请输入监理电话" />
+                    <Form.Item label="复核人电话" field="monitortel">
+                      <Input placeholder="请输入复核人电话" />
                     </Form.Item>
                   </Col>
                 </Row>
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="监理工程师" field="supervisorname">
+                    <Form.Item label="监理工程师" field="supervisorname" rules={[{ required: true, message: '请输入监理工程师' }]}>
                       <Input placeholder="请输入监理工程师" />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="监理单位证" field="supervisorno">
-                      <Input placeholder="请输入监理单位证" />
+                    <Form.Item label="监理身份证" field="supervisorno" rules={[{ required: true, message: '请输入监理身份证' }]}>
+                      <Input placeholder="请输入监理身份证" />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="监理单位" field="supervisortel">
-                      <Input placeholder="请输入监理单位" />
+                    <Form.Item label="监理电话" field="supervisortel">
+                      <Input placeholder="请输入监理电话" />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -295,21 +369,42 @@ function PalmSketchEditPage() {
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="开挖高度" field="kwgd">
-                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} />
+                    <Form.Item 
+                      label="开挖高度" 
+                      field="kwgd"
+                      extra="单位：m，保留2位小数，整数位不超过3位"
+                    >
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} max={999.99} suffix="m" />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="开挖宽度" field="kwkd">
-                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} />
+                    <Form.Item 
+                      label="开挖宽度" 
+                      field="kwkd"
+                      extra="单位：m，保留2位小数，整数位不超过3位"
+                    >
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} max={999.99} suffix="m" />
                     </Form.Item>
                   </Col>
                 </Row>
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="开挖面积" field="kwmj">
-                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} />
+                    <Form.Item 
+                      label="距洞口距离" 
+                      field="jdkjl"
+                      extra="单位：m，保留2位小数，掌子面距开挖洞口当前的距离"
+                    >
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} suffix="m" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item 
+                      label="开挖面积" 
+                      field="kwmj"
+                      extra="单位：m²，保留2位小数，整数位不超过6位"
+                    >
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} max={999999.99} suffix="m²" />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
@@ -343,8 +438,8 @@ function PalmSketchEditPage() {
               </Form>
             </TabPane>
 
-            {/* 及岩土体数据信息 Tab */}
-            <TabPane key="rocksoil" title="及岩土体数据信息">
+            {/* 其他信息及岩土体数据信息 Tab */}
+            <TabPane key="rocksoil" title="其他信息及岩土体数据信息">
               <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
                 <div style={{ 
                   textAlign: 'center', 
@@ -355,22 +450,58 @@ function PalmSketchEditPage() {
                   backgroundColor: '#f7f8fa',
                   borderRadius: 4
                 }}>
-                  岩体信息
+                  其他信息
                 </div>
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="岩体完整性评定" field="ytwzztpd">
-                      <InputNumber placeholder="请输入岩体完整性评定" style={{ width: '100%' }} min={1} max={5} />
+                    <Form.Item label="预报分段结论" field="conclusionyb">
+                      <TextArea 
+                        placeholder="如：掘进性一般，掌子面无水，实际围岩情况与设计相符。" 
+                        maxLength={512}
+                        showWordLimit
+                        style={{ minHeight: 100 }}
+                      />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="岩性" field="ytlx">
-                      <Input placeholder="请输入岩性，如：泥岩夹砂岩" />
+                    <Form.Item label="后续建议" field="suggestion">
+                      <TextArea 
+                        placeholder="该段岩溶裂隙发育，加强加深炮孔探测，超前支护，初期支护增强，做好防排水措施，防止掉块，和围岩失稳，确保..." 
+                        maxLength={512}
+                        showWordLimit
+                        style={{ minHeight: 100 }}
+                      />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="岩土特征类别" field="zzmsmType">
+                    <Form.Item label="实际采取措施" field="solution">
+                      <TextArea 
+                        placeholder="无" 
+                        maxLength={512}
+                        showWordLimit
+                        style={{ minHeight: 100 }}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={24}>
+                    <Form.Item label="备注" field="remark">
+                      <TextArea 
+                        placeholder="该段岩溶裂隙发育，九隧加深炮孔探测，超前支护，初期支护增强，做好防排水措施，防止掉块，和围岩失稳，确保..." 
+                        maxLength={512}
+                        showWordLimit
+                        style={{ minHeight: 80 }}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={8}>
+                    <Form.Item label="岩土特征类别" field="zzmsmType" rules={[{ required: true, message: '请选择岩土特征类别' }]}>
                       <Select placeholder="请选择">
                         <Select.Option value={1}>岩体</Select.Option>
                         <Select.Option value={2}>土体</Select.Option>
@@ -379,6 +510,187 @@ function PalmSketchEditPage() {
                   </Col>
                 </Row>
 
+                {/* 岩体数据 - 当zzmsmType=1时显示 */}
+                <div style={{ 
+                  textAlign: 'center', 
+                  fontSize: 16, 
+                  fontWeight: 600, 
+                  margin: '32px 0 24px',
+                  padding: '12px 0',
+                  backgroundColor: '#f7f8fa',
+                  borderRadius: 4
+                }}>
+                  岩体数据
+                </div>
+
+                <Row gutter={24}>
+                  <Col span={8}>
+                    <Form.Item label="岩体类型" field="ytlx">
+                      <Input placeholder="如：花岗岩、石灰岩" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="内聚力" field="njl" extra="单位：MPa，最多2位小数">
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="内摩擦角" field="nfcj" extra="单位：°，最多2位小数">
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} max={90} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={8}>
+                    <Form.Item label="单轴饱和抗压强度" field="dzbhkyqd" extra="单位：MPa，最多2位小数">
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="点荷载强度指数" field="dhzqdjx" extra="单位：MPa，最多2位小数">
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="变形模量" field="bxml" extra="单位：GPa，最多2位小数">
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={8}>
+                    <Form.Item label="泊松比" field="bsb" extra="最多2位小数">
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} max={0.5} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="天然重度" field="trzd" extra="单位：kN/m³，最多2位小数">
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="岩性组别其他" field="yxzbqt">
+                      <Input placeholder="请输入" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={8}>
+                    <Form.Item label="岩性组别评定" field="yxzbpd">
+                      <Select placeholder="请选择">
+                        <Select.Option value={1}>坚硬岩</Select.Option>
+                        <Select.Option value={2}>较坚硬岩</Select.Option>
+                        <Select.Option value={3}>较软岩</Select.Option>
+                        <Select.Option value={4}>软岩</Select.Option>
+                        <Select.Option value={5}>极软岩</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="地质构造影响程度" field="dzgzyxcd">
+                      <Select placeholder="请选择">
+                        <Select.Option value={1}>轻微</Select.Option>
+                        <Select.Option value={2}>较重</Select.Option>
+                        <Select.Option value={3}>严重</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="结构面组数" field="jgmzs">
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} min={0} precision={0} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={8}>
+                    <Form.Item label="平均间距" field="pjjj" extra="单位：m，最多2位小数">
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="主要结构面产状" field="zyjgmcz">
+                      <Input placeholder="如：120°∠60°" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="其他结构面产状" field="qtjgmcz">
+                      <Input placeholder="如：45°∠75°" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={8}>
+                    <Form.Item label="延伸性" field="ysx">
+                      <Select placeholder="请选择">
+                        <Select.Option value={1}>极短</Select.Option>
+                        <Select.Option value={2}>短</Select.Option>
+                        <Select.Option value={3}>中等</Select.Option>
+                        <Select.Option value={4}>长</Select.Option>
+                        <Select.Option value={5}>极长</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="粗糙度" field="ccd">
+                      <Select placeholder="请选择">
+                        <Select.Option value={1}>光滑</Select.Option>
+                        <Select.Option value={2}>较光滑</Select.Option>
+                        <Select.Option value={3}>较粗糙</Select.Option>
+                        <Select.Option value={4}>粗糙</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="张开度" field="zkd" extra="单位：mm，最多2位小数">
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={2} min={0} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={8}>
+                    <Form.Item label="填充及胶结" field="tchjz">
+                      <Input placeholder="如：无填充、泥质填充" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="风化程度" field="fxcd">
+                      <Select placeholder="请选择">
+                        <Select.Option value={1}>未风化</Select.Option>
+                        <Select.Option value={2}>微风化</Select.Option>
+                        <Select.Option value={3}>中等风化</Select.Option>
+                        <Select.Option value={4}>强风化</Select.Option>
+                        <Select.Option value={5}>全风化</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="岩体完整状态评定" field="ytwzztpd">
+                      <Select placeholder="请选择">
+                        <Select.Option value={1}>完整</Select.Option>
+                        <Select.Option value={2}>较完整</Select.Option>
+                        <Select.Option value={3}>较破碎</Select.Option>
+                        <Select.Option value={4}>破碎</Select.Option>
+                        <Select.Option value={5}>极破碎</Select.Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={24}>
+                    <Form.Item label="岩体完整性描述" field="ytwzsm">
+                      <TextArea placeholder="请输入岩体完整性描述" maxLength={512} showWordLimit style={{ minHeight: 80 }} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                {/* 土体数据 - 当zzmsmType=2时显示 */}
                 <div style={{ 
                   textAlign: 'center', 
                   fontSize: 16, 
@@ -393,28 +705,46 @@ function PalmSketchEditPage() {
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="土名称" field="tmc">
-                      <Input placeholder="请输入土名称，如：粉质土" />
+                    <Form.Item label="土名称" field="soilname">
+                      <Select placeholder="请选择土名称">
+                        <Select.Option value={1}>粘性土</Select.Option>
+                        <Select.Option value={2}>粉土</Select.Option>
+                        <Select.Option value={3}>砂土</Select.Option>
+                        <Select.Option value={4}>粗粒土</Select.Option>
+                        <Select.Option value={5}>其他</Select.Option>
+                      </Select>
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="土体特征" field="tttz">
-                      <TextArea 
-                        placeholder="请输入土体特征" 
-                        maxLength={512}
-                        showWordLimit
-                        style={{ minHeight: 80 }}
-                      />
+                    <Form.Item label="土名称补充" field="soilname2">
+                      <Input placeholder="如：粘土、砂质粘土" />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
                     <Form.Item label="地质年代" field="dznd">
-                      <Select placeholder="请选择地质年代">
-                        <Select.Option value="中元古代-蓟县">中元古代-蓟县</Select.Option>
-                        <Select.Option value="新元古代">新元古代</Select.Option>
-                        <Select.Option value="古生代">古生代</Select.Option>
-                        <Select.Option value="中生代">中生代</Select.Option>
-                        <Select.Option value="新生代">新生代</Select.Option>
+                      <InputNumber placeholder="请输入" style={{ width: '100%' }} precision={0} min={0} />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={8}>
+                    <Form.Item label="地质成因" field="dzcy">
+                      <Input placeholder="如：沉积、冲积" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="土体其他信息" field="ttqtxx">
+                      <Input placeholder="如：含砾石" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="状态" field="zt">
+                      <Select placeholder="请选择状态">
+                        <Select.Option value="硬塑">硬塑</Select.Option>
+                        <Select.Option value="可塑">可塑</Select.Option>
+                        <Select.Option value="软塑">软塑</Select.Option>
+                        <Select.Option value="流塑">流塑</Select.Option>
                       </Select>
                     </Form.Item>
                   </Col>
@@ -422,32 +752,61 @@ function PalmSketchEditPage() {
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="土体颜色" field="ttys">
-                      <TextArea 
-                        placeholder="请输入土体颜色" 
-                        maxLength={512}
-                        showWordLimit
-                        style={{ minHeight: 80 }}
+                    <Form.Item label="湿度" field="sd" extra="最多2位小数">
+                      <InputNumber 
+                        placeholder="请输入" 
+                        style={{ width: '100%' }} 
+                        precision={2}
+                        min={0}
                       />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="土体结构" field="ttjg">
-                      <TextArea 
-                        placeholder="请输入土体结构" 
-                        maxLength={512}
-                        showWordLimit
-                        style={{ minHeight: 80 }}
+                    <Form.Item label="密实度" field="msd" extra="最多2位小数">
+                      <InputNumber 
+                        placeholder="请输入" 
+                        style={{ width: '100%' }} 
+                        precision={2}
+                        min={0}
                       />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="成因" field="cy">
-                      <TextArea 
-                        placeholder="请输入成因" 
-                        maxLength={512}
-                        showWordLimit
-                        style={{ minHeight: 80 }}
+                    <Form.Item label="级配" field="jp">
+                      <Input placeholder="如：良好、不良" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+
+                <Row gutter={24}>
+                  <Col span={8}>
+                    <Form.Item label="密度" field="md" extra="单位：g/cm³，最多2位小数">
+                      <InputNumber 
+                        placeholder="请输入" 
+                        style={{ width: '100%' }} 
+                        precision={2}
+                        min={0}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="含水量" field="hsl" extra="单位：%，最多2位小数" rules={[{ required: true, message: '请输入含水量' }]}>
+                      <InputNumber 
+                        placeholder="请输入" 
+                        style={{ width: '100%' }} 
+                        precision={2}
+                        min={0}
+                        max={100}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="压缩模量" field="ysml" extra="单位：MPa，最多2位小数" rules={[{ required: true, message: '请输入压缩模量' }]}>
+                      <InputNumber 
+                        placeholder="请输入" 
+                        style={{ width: '100%' }} 
+                        precision={2}
+                        min={0}
                       />
                     </Form.Item>
                   </Col>
@@ -455,41 +814,13 @@ function PalmSketchEditPage() {
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="湿度" field="sd">
-                      <TextArea 
-                        placeholder="请输入湿度" 
-                        maxLength={512}
-                        showWordLimit
-                        style={{ minHeight: 80 }}
+                    <Form.Item label="纵波波速" field="zbbs" extra="单位：km/s，最多2位小数">
+                      <InputNumber 
+                        placeholder="请输入" 
+                        style={{ width: '100%' }} 
+                        precision={2}
+                        min={0}
                       />
-                    </Form.Item>
-                  </Col>
-                  <Col span={8}>
-                    <Form.Item label="密实度" field="msd">
-                      <TextArea 
-                        placeholder="请输入密实度" 
-                        maxLength={512}
-                        showWordLimit
-                        style={{ minHeight: 80 }}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col span={8}>
-                    <Form.Item label="塑性" field="sx">
-                      <TextArea 
-                        placeholder="请输入塑性" 
-                        maxLength={512}
-                        showWordLimit
-                        style={{ minHeight: 80 }}
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-
-                <Row gutter={24}>
-                  <Col span={8}>
-                    <Form.Item label="硬度" field="yd">
-                      <InputNumber placeholder="请输入硬度" style={{ width: '100%' }} />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -513,11 +844,15 @@ function PalmSketchEditPage() {
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="基本围岩级别" field="basicwylevel">
-                      <Select placeholder="请选择基本围岩级别">
-                        <Select.Option value={1}>Ⅰ</Select.Option>
-                        <Select.Option value={2}>Ⅱ</Select.Option>
-                        <Select.Option value={3}>Ⅲ</Select.Option>
+                    <Form.Item 
+                      label="围岩基本分级" 
+                      field="basicwylevel"
+                      extra="岩体时Ⅰ至Ⅵ可用；土体时Ⅳ至Ⅵ可用"
+                    >
+                      <Select placeholder="请选择围岩基本分级">
+                        <Select.Option value={1} disabled={form.getFieldValue('zzmsmType') === 2}>Ⅰ</Select.Option>
+                        <Select.Option value={2} disabled={form.getFieldValue('zzmsmType') === 2}>Ⅱ</Select.Option>
+                        <Select.Option value={3} disabled={form.getFieldValue('zzmsmType') === 2}>Ⅲ</Select.Option>
                         <Select.Option value={4}>Ⅳ</Select.Option>
                         <Select.Option value={5}>Ⅴ</Select.Option>
                         <Select.Option value={6}>Ⅵ</Select.Option>
@@ -525,40 +860,73 @@ function PalmSketchEditPage() {
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="节理面组数" field="jgmzs">
-                      <InputNumber placeholder="请输入节理面组数" style={{ width: '100%' }} min={0} />
+                    <Form.Item 
+                      label="埋深H" 
+                      field="ms"
+                      extra="单位：m，保留2位小数，整数位不超过4位"
+                    >
+                      <InputNumber 
+                        placeholder="请输入埋深" 
+                        style={{ width: '100%' }} 
+                        precision={2}
+                        min={0}
+                        max={9999.99}
+                        suffix="m"
+                      />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="地下水评定" field="dxspd">
-                      <InputNumber placeholder="请输入地下水评定" style={{ width: '100%' }} min={0} />
+                    <Form.Item 
+                      label="渗水量" 
+                      field="shenshuiliang"
+                      extra="单位：L/(min·10m)，不超过3位整数"
+                    >
+                      <InputNumber 
+                        placeholder="请输入渗水量" 
+                        style={{ width: '100%' }} 
+                        min={0}
+                        max={999}
+                        suffix="L/(min·10m)"
+                      />
                     </Form.Item>
                   </Col>
                 </Row>
 
                 <Row gutter={24}>
                   <Col span={8}>
-                    <Form.Item label="平均间距(m)" field="pjjj">
+                    <Form.Item 
+                      label="评估基准Rc/σmax" 
+                      field="pgjz"
+                      extra="不超过3位整数"
+                    >
                       <InputNumber 
-                        placeholder="请输入平均间距" 
+                        placeholder="请输入评估基准" 
                         style={{ width: '100%' }} 
-                        precision={2}
-                        step={0.01}
                         min={0}
+                        max={999}
                       />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="评估结值" field="pgjz">
-                      <InputNumber placeholder="请输入评估结值" style={{ width: '100%' }} min={0} />
+                    <Form.Item label="地下水评定" field="dxspd">
+                      <Select placeholder="请选择地下水评定">
+                        <Select.Option value={1}>无地下水</Select.Option>
+                        <Select.Option value={2}>潮湿或点滴状出水</Select.Option>
+                        <Select.Option value={3}>淋雨状或线流状出水</Select.Option>
+                        <Select.Option value={4}>涌流状出水</Select.Option>
+                      </Select>
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item label="修正后围岩级别" field="fixwylevel">
+                    <Form.Item 
+                      label="修正后围岩级别" 
+                      field="fixwylevel"
+                      extra="岩体时Ⅰ至Ⅵ可用；土体时Ⅳ至Ⅵ可用"
+                    >
                       <Select placeholder="请选择修正后围岩级别">
-                        <Select.Option value={1}>Ⅰ</Select.Option>
-                        <Select.Option value={2}>Ⅱ</Select.Option>
-                        <Select.Option value={3}>Ⅲ</Select.Option>
+                        <Select.Option value={1} disabled={form.getFieldValue('zzmsmType') === 2}>Ⅰ</Select.Option>
+                        <Select.Option value={2} disabled={form.getFieldValue('zzmsmType') === 2}>Ⅱ</Select.Option>
+                        <Select.Option value={3} disabled={form.getFieldValue('zzmsmType') === 2}>Ⅲ</Select.Option>
                         <Select.Option value={4}>Ⅳ</Select.Option>
                         <Select.Option value={5}>Ⅴ</Select.Option>
                         <Select.Option value={6}>Ⅵ</Select.Option>
@@ -616,7 +984,7 @@ function PalmSketchEditPage() {
                 </div>
 
                 <div style={{ marginBottom: 16 }}>
-                  <Button type="primary" icon={<IconPlus />}>
+                  <Button type="primary" icon={<IconPlus />} onClick={handleOpenSegmentModal}>
                     添加
                   </Button>
                 </div>
@@ -646,7 +1014,23 @@ function PalmSketchEditPage() {
                         return <span style={{ color, fontWeight: 500 }}>{riskText}</span>
                       }
                     },
-                    { title: '地质类型', dataIndex: 'geologyType', width: 100 },
+                    { 
+                      title: '地质类型', 
+                      dataIndex: 'dzjb', 
+                      width: 100,
+                      render: (val: string) => {
+                        const colorMap: Record<string, { bg: string; text: string; label: string }> = {
+                          'green': { bg: '#52c41a', text: '#fff', label: '绿色' },
+                          'yellow': { bg: '#faad14', text: '#fff', label: '黄色' },
+                          'red': { bg: '#ff4d4f', text: '#fff', label: '红色' },
+                        }
+                        const config = colorMap[val]
+                        if (config) {
+                          return <span style={{ backgroundColor: config.bg, color: config.text, padding: '2px 8px', borderRadius: 4 }}>{config.label}</span>
+                        }
+                        return val || '-'
+                      }
+                    },
                     { 
                       title: '围岩等级', 
                       dataIndex: 'wylevel', 
@@ -662,10 +1046,20 @@ function PalmSketchEditPage() {
                         return '-'
                       }
                     },
-                    { title: '预报动态', dataIndex: 'jlresult', ellipsis: true, width: 200 }
+                    { title: '预报动态', dataIndex: 'jlresult', ellipsis: true, width: 200 },
+                    {
+                      title: '操作',
+                      width: 120,
+                      render: (_: any, __: any, index: number) => (
+                        <Space>
+                          <Button type="text" size="small" style={{ color: '#165DFF' }} onClick={() => handleEditSegment(index)}>编辑</Button>
+                          <Button type="text" size="small" status="danger" onClick={() => handleDeleteSegment(index)}>删除</Button>
+                        </Space>
+                      ),
+                    }
                   ]}
                   data={segmentList}
-                  rowKey={(record: any) => record.ybjgPk}
+                  rowKey={(record: any, index?: number) => record.ybjgPk || String(index)}
                   pagination={false}
                   border
                 />
@@ -805,6 +1199,125 @@ function PalmSketchEditPage() {
           </div>
         </Spin>
       </div>
+
+      {/* 分段信息新增/编辑弹窗 */}
+      <Modal
+        title={editingSegmentIndex !== null ? '编辑分段信息' : '新增分段信息'}
+        visible={segmentModalVisible}
+        onOk={handleConfirmSegment}
+        onCancel={() => setSegmentModalVisible(false)}
+        okText="确认"
+        cancelText="取消"
+        style={{ width: 700 }}
+      >
+        <Form form={segmentForm} layout="vertical">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="里程冠号" field="dkname" rules={[{ required: true, message: '请输入里程冠号' }]}>
+                <Input placeholder="例如: DK" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="围岩等级" field="wylevel" rules={[{ required: true, message: '请选择围岩等级' }]}>
+                <Select placeholder="请选择">
+                  <Select.Option value={1}>Ⅰ级</Select.Option>
+                  <Select.Option value={2}>Ⅱ级</Select.Option>
+                  <Select.Option value={3}>Ⅲ级</Select.Option>
+                  <Select.Option value={4}>Ⅳ级</Select.Option>
+                  <Select.Option value={5}>Ⅴ级</Select.Option>
+                  <Select.Option value={6}>Ⅵ级</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="开始里程" required>
+                <Space>
+                  <Form.Item field="sdkname" noStyle>
+                    <Input style={{ width: 80 }} placeholder="DK" />
+                  </Form.Item>
+                  <span>+</span>
+                  <Form.Item field="sdkilo" noStyle rules={[{ required: true, message: '请输入开始里程值' }]}>
+                    <InputNumber style={{ width: 120 }} precision={2} placeholder="里程值" />
+                  </Form.Item>
+                </Space>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="结束里程" required>
+                <Space>
+                  <Form.Item field="edkname" noStyle>
+                    <Input style={{ width: 80 }} placeholder="DK" />
+                  </Form.Item>
+                  <span>+</span>
+                  <Form.Item field="edkilo" noStyle rules={[{ required: true, message: '请输入结束里程值' }]}>
+                    <InputNumber style={{ width: 120 }} precision={2} placeholder="里程值" />
+                  </Form.Item>
+                </Space>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item label="产生时间" field="ybjgTime" rules={[{ required: true, message: '请选择产生时间' }]}>
+                <DatePicker showTime style={{ width: '100%' }} placeholder="请选择日期时间" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item label="风险类别" field="risklevel" rules={[{ required: true, message: '请选择风险类别' }]}>
+                <Select placeholder="请选择风险类别">
+                  <Select.Option value="破碎带">破碎带</Select.Option>
+                  <Select.Option value="岩溶">岩溶</Select.Option>
+                  <Select.Option value="瓦斯">瓦斯</Select.Option>
+                  <Select.Option value="涌水">涌水</Select.Option>
+                  <Select.Option value="突泥">突泥</Select.Option>
+                  <Select.Option value="地应力">地应力</Select.Option>
+                  <Select.Option value="采空区">采空区</Select.Option>
+                  <Select.Option value="岩爆">岩爆</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="地质级别">
+                <Space>
+                  <span>已选:</span>
+                  <Button 
+                    size="small" 
+                    style={{ backgroundColor: selectedDzjb === 'green' ? '#52c41a' : '#f0f0f0', color: selectedDzjb === 'green' ? '#fff' : '#333' }}
+                    onClick={() => setSelectedDzjb('green')}
+                  >
+                    绿色
+                  </Button>
+                  <Button 
+                    size="small" 
+                    style={{ backgroundColor: selectedDzjb === 'yellow' ? '#faad14' : '#f0f0f0', color: selectedDzjb === 'yellow' ? '#fff' : '#333' }}
+                    onClick={() => setSelectedDzjb('yellow')}
+                  >
+                    黄色
+                  </Button>
+                  <Button 
+                    size="small" 
+                    style={{ backgroundColor: selectedDzjb === 'red' ? '#ff4d4f' : '#f0f0f0', color: selectedDzjb === 'red' ? '#fff' : '#333' }}
+                    onClick={() => setSelectedDzjb('red')}
+                  >
+                    红色
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item label="预报结论" field="jlresult">
+                <TextArea placeholder="请输入预报结论..." rows={4} maxLength={500} showWordLimit />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
     </div>
   )
 }

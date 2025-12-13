@@ -985,6 +985,8 @@ function GeologyForecastPage() {
                 <Select.Option key={4} value={4}>电磁波反射</Select.Option>,
                 <Select.Option key={5} value={5}>高分辨直流电</Select.Option>,
                 <Select.Option key={6} value={6}>瞬变电磁</Select.Option>,
+                <Select.Option key={7} value={7}>微震监测预报</Select.Option>,
+                <Select.Option key={0} value={0}>其他</Select.Option>,
               ]}
               {activeTab === 'drilling' && [
                 <Select.Option key={13} value={13}>超前水平钻</Select.Option>,

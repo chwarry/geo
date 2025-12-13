@@ -18,12 +18,31 @@ export interface RequestOptions<TIn = any, TOut = any> {
  * Normalize various server response shapes:
  * - If server already returns the final data, just pass it through.
  * - If server wraps data like { code, message, data }, unwrap data by default.
+ * - Check resultcode/code for business errors and throw if not success.
  * You can override by passing a custom `transform` in options.
  */
 function defaultTransform<T>(raw: any): T {
   if (raw && typeof raw === 'object') {
-    // common shapes
-    if ('data' in raw && (('code' in raw) || ('message' in raw) || ('success' in raw))) {
+    // 检查业务错误码 - resultcode 不为 0 或 200 时表示业务错误
+    if ('resultcode' in raw) {
+      if (raw.resultcode !== 0 && raw.resultcode !== 200) {
+        const errorMsg = raw.message || raw.msg || `业务错误 (${raw.resultcode})`;
+        console.error('❌ [API] 业务错误:', raw.resultcode, errorMsg);
+        console.error('❌ [API] 完整响应:', raw);
+        Message.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+      // resultcode 为 0 或 200，但 data 为 false 时也表示操作失败
+      if (raw.data === false) {
+        const errorMsg = raw.message || raw.msg || '操作失败';
+        console.error('❌ [API] 操作失败 (data: false):', errorMsg);
+        console.error('❌ [API] 完整响应:', raw);
+        Message.error(errorMsg);
+        throw new Error(errorMsg);
+      }
+    }
+    // common shapes - unwrap data field
+    if ('data' in raw && (('code' in raw) || ('message' in raw) || ('success' in raw) || ('resultcode' in raw))) {
       return raw.data as T;
     }
   }
