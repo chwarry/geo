@@ -7,6 +7,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # 安装依赖
+# 设置淘宝镜像源加速
+RUN npm config set registry https://registry.npmmirror.com
 # 使用 npm ci 保证依赖版本一致，如果失败可以改回 npm install
 RUN npm install
 
